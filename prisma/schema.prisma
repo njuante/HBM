@@ -1,0 +1,426 @@
+// Esquema de datos de HBM — ERP doméstico para familias y casas.
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────── Enums ───────────────────────────────
+
+enum Rol {
+  OWNER
+  ADMIN
+  MEMBER
+  /// Acceso restringido al portal de una casa concreta. No es un miembro de la
+  /// familia: no ve sus datos, solo lo que se le comparte de su vivienda.
+  INQUILINO
+}
+
+enum TipoCategoria {
+  GASTO
+  INGRESO
+}
+
+enum MetodoPago {
+  EFECTIVO
+  TARJETA
+  TRANSFERENCIA
+  DOMICILIACION
+  OTRO
+}
+
+enum EstadoPago {
+  PENDIENTE
+  PAGADA
+}
+
+enum TipoArchivo {
+  PDF
+  IMAGEN
+}
+
+enum PeriodoPresupuesto {
+  MENSUAL
+  ANUAL
+}
+
+enum Frecuencia {
+  SEMANAL
+  MENSUAL
+  BIMESTRAL
+  TRIMESTRAL
+  SEMESTRAL
+  ANUAL
+}
+
+enum TipoMovimiento {
+  GASTO
+  INGRESO
+}
+
+// Estado del pipeline de OCR (módulo futuro; enganche preparado).
+enum OcrEstado {
+  NO_PROCESADO
+  PENDIENTE
+  PROCESADO
+  ERROR
+}
+
+// ─────────────────────────── Usuarios y sesión ───────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  nombre       String
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships  Membership[]
+  invitaciones Invitacion[]
+  sessions     Session[]
+  gastos       Gasto[]
+  ingresos     Ingreso[]
+  recurrencias Recurrencia[]
+}
+
+// Sesión opaca en BD: el token aleatorio viaja en una cookie httpOnly.
+model Session {
+  id              String   @id @default(cuid())
+  token           String   @unique
+  userId          String
+  activeFamiliaId String? // familia seleccionada actualmente (multi-familia)
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ──────────────────────── Tenant: Familia + casas ────────────────────
+
+model Familia {
+  id               String   @id @default(cuid())
+  nombre           String
+  /// Módulo opcional: hasta que se activa no aparece nada de alquileres.
+  alquileresActivo Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  memberships  Membership[]
+  casas        Casa[]
+  categorias   Categoria[]
+  gastos       Gasto[]
+  ingresos     Ingreso[]
+  facturas     Factura[]
+  presupuestos Presupuesto[]
+  recurrencias Recurrencia[]
+  propuestas   MovimientoPropuesto[]
+  invitaciones Invitacion[]
+  contratos    ContratoAlquiler[]
+}
+
+model Membership {
+  id        String   @id @default(cuid())
+  userId    String
+  familiaId String
+  rol       Rol      @default(MEMBER)
+  /// Alcance del acceso. Obligatorio cuando el rol es INQUILINO.
+  casaId    String?
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  familia Familia @relation(fields: [familiaId], references: [id], onDelete: Cascade)
+  casa    Casa?   @relation(fields: [casaId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, familiaId])
+  @@index([familiaId])
+}
+
+model Casa {
+  id         String   @id @default(cuid())
+  familiaId  String
+  nombre     String
+  direccion  String?
+  /// Marca la vivienda como alquilada: habilita contrato y portal.
+  enAlquiler Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  familia      Familia            @relation(fields: [familiaId], references: [id], onDelete: Cascade)
+  memberships  Membership[]
+  contratos    ContratoAlquiler[]
+  gastos       Gasto[]
+  ingresos     Ingreso[]
+  facturas     Factura[]
+  presupuestos Presupuesto[]
+  recurrencias Recurrencia[]
+  invitaciones Invitacion[]
+
+  @@index([familiaId])
+}
+
+// ─────────────────────────────── Categorías ──────────────────────────
+
+model Categoria {
+  id        String        @id @default(cuid())
+  familiaId String
+  tipo      TipoCategoria
+  nombre    String
+  color     String        @default("#64748b") // hex, base de las gráficas
+  icono     String? // nombre de icono lucide (opcional)
+  parentId  String? // subcategoría si apunta a otra categoría
+
+  familia       Familia     @relation(fields: [familiaId], references: [id], onDelete: Cascade)
+  parent        Categoria?  @relation("Subcategorias", fields: [parentId], references: [id], onDelete: Cascade)
+  subcategorias Categoria[] @relation("Subcategorias")
+
+  gastosComoCategoria    Gasto[]       @relation("GastoCategoria")
+  gastosComoSubcategoria Gasto[]       @relation("GastoSubcategoria")
+  ingresos               Ingreso[]
+  presupuestos           Presupuesto[]
+  recurrencias           Recurrencia[] @relation("RecurrenciaCategoria")
+  recurrenciasComoSub    Recurrencia[] @relation("RecurrenciaSubcategoria")
+
+  @@unique([familiaId, tipo, parentId, nombre])
+  @@index([familiaId])
+}
+
+// ────────────────────────────── Invitaciones ─────────────────────────
+
+/// Invitación a una familia. El token solo existe en el enlace que se envía:
+/// en la base de datos se guarda su hash, igual que una contraseña.
+model Invitacion {
+  id         String    @id @default(cuid())
+  familiaId  String
+  email      String
+  rol        Rol       @default(MEMBER)
+  casaId     String? // alcance del acceso cuando el rol lo exige
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  aceptadaAt DateTime?
+  creadaPor  String
+  createdAt  DateTime  @default(now())
+
+  familia Familia @relation(fields: [familiaId], references: [id], onDelete: Cascade)
+  casa    Casa?   @relation(fields: [casaId], references: [id], onDelete: Cascade)
+  autor   User    @relation(fields: [creadaPor], references: [id], onDelete: Cascade)
+
+  @@index([familiaId])
+  @@index([email])
+}
+
+// ─────────────────────────── Gastos e Ingresos ───────────────────────
+
+model Gasto {
+  id             String      @id @default(cuid())
+  familiaId      String
+  casaId         String
+  categoriaId    String
+  subcategoriaId String?
+  usuarioId      String
+  importe        Decimal     @db.Decimal(12, 2)
+  moneda         String      @default("EUR")
+  fecha          DateTime
+  concepto       String
+  emisor         String?
+  metodoPago     MetodoPago?
+  recurrente     Boolean     @default(false)
+  recurrenciaId  String? // generado por una plantilla de recurrencia
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  familia      Familia      @relation(fields: [familiaId], references: [id], onDelete: Cascade)
+  casa         Casa         @relation(fields: [casaId], references: [id], onDelete: Cascade)
+  categoria    Categoria    @relation("GastoCategoria", fields: [categoriaId], references: [id])
+  subcategoria Categoria?   @relation("GastoSubcategoria", fields: [subcategoriaId], references: [id])
+  usuario      User         @relation(fields: [usuarioId], references: [id])
+  factura      Factura?
+  recurrencia  Recurrencia? @relation(fields: [recurrenciaId], references: [id], onDelete: SetNull)
+
+  // Candado de idempotencia: una recurrencia genera como mucho un gasto por fecha.
+  @@unique([recurrenciaId, fecha])
+  @@index([familiaId, fecha])
+  @@index([casaId])
+  @@index([categoriaId])
+}
+
+model Ingreso {
+  id            String   @id @default(cuid())
+  familiaId     String
+  casaId        String?
+  categoriaId   String
+  usuarioId     String
+  importe       Decimal  @db.Decimal(12, 2)
+  moneda        String   @default("EUR")
+  fecha         DateTime
+  concepto      String
+  fuente        String?
+  recurrente    Boolean  @default(false)
+  recurrenciaId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  familia     Familia      @relation(fields: [familiaId], references: [id], onDelete: Cascade)
+  casa        Casa?        @relation(fields: [casaId], references: [id], onDelete: SetNull)
+  categoria   Categoria    @relation(fields: [categoriaId], references: [id])
+  usuario     User         @relation(fields: [usuarioId], references: [id])
+  recurrencia Recurrencia? @relation(fields: [recurrenciaId], references: [id], onDelete: SetNull)
+
+  @@unique([recurrenciaId, fecha])
+  @@index([familiaId, fecha])
+  @@index([casaId])
+  @@index([categoriaId])
+}
+
+// ───────────────────────────── Recurrencias ──────────────────────────
+
+/// Plantilla de un movimiento que se repite (alquiler, nómina, suministros).
+/// `proximaFecha` es el reloj: la materialización crea el movimiento y la
+/// adelanta, así que repetirla no duplica nada.
+model Recurrencia {
+  id             String         @id @default(cuid())
+  familiaId      String
+  tipo           TipoMovimiento
+  casaId         String?
+  categoriaId    String
+  subcategoriaId String?
+  usuarioId      String
+  importe        Decimal        @db.Decimal(12, 2)
+  concepto       String
+  contraparte    String? // emisor (gasto) o fuente (ingreso)
+  metodoPago     MetodoPago?
+  frecuencia     Frecuencia
+  intervalo      Int            @default(1) // cada N periodos
+  diaMes         Int? // 1-31, recortado al último día del mes
+  proximaFecha   DateTime
+  fin            DateTime?
+  automatica     Boolean        @default(true) // false = propone en vez de crear
+  activa         Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  familia      Familia               @relation(fields: [familiaId], references: [id], onDelete: Cascade)
+  casa         Casa?                 @relation(fields: [casaId], references: [id], onDelete: Cascade)
+  categoria    Categoria             @relation("RecurrenciaCategoria", fields: [categoriaId], references: [id], onDelete: Cascade)
+  subcategoria Categoria?            @relation("RecurrenciaSubcategoria", fields: [subcategoriaId], references: [id], onDelete: SetNull)
+  usuario      User                  @relation(fields: [usuarioId], references: [id])
+  gastos       Gasto[]
+  ingresos     Ingreso[]
+  propuestas   MovimientoPropuesto[]
+  contrato     ContratoAlquiler?
+
+  @@index([familiaId, proximaFecha])
+}
+
+/// Movimiento que una recurrencia manual (`automatica = false`) deja pendiente
+/// de confirmar. El `@@unique` impide proponer dos veces la misma fecha.
+model MovimientoPropuesto {
+  id            String    @id @default(cuid())
+  familiaId     String
+  recurrenciaId String
+  fecha         DateTime
+  importe       Decimal   @db.Decimal(12, 2)
+  descartadaAt  DateTime?
+  createdAt     DateTime  @default(now())
+
+  familia     Familia     @relation(fields: [familiaId], references: [id], onDelete: Cascade)
+  recurrencia Recurrencia @relation(fields: [recurrenciaId], references: [id], onDelete: Cascade)
+
+  @@unique([recurrenciaId, fecha])
+  @@index([familiaId])
+}
+
+// ─────────────────────────────── Alquileres ──────────────────────────
+
+/// Contrato de alquiler de una casa. La renta se cobra a través de una
+/// `Recurrencia` de tipo INGRESO, que es quien la genera cada mes.
+model ContratoAlquiler {
+  id              String    @id @default(cuid())
+  familiaId       String
+  casaId          String
+  inquilinoNombre String
+  inquilinoEmail  String
+  inquilinoUserId String? // se rellena al aceptar la invitación
+  inicio          DateTime
+  fin             DateTime?
+  rentaMensual    Decimal   @db.Decimal(12, 2)
+  fianza          Decimal?  @db.Decimal(12, 2)
+  diaCobro        Int       @default(1)
+  recurrenciaId   String?   @unique
+  activo          Boolean   @default(true)
+  notas           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  familia     Familia      @relation(fields: [familiaId], references: [id], onDelete: Cascade)
+  casa        Casa         @relation(fields: [casaId], references: [id], onDelete: Cascade)
+  recurrencia Recurrencia? @relation(fields: [recurrenciaId], references: [id], onDelete: SetNull)
+
+  @@index([familiaId, casaId])
+}
+
+// ────────────────────────────── Presupuestos ─────────────────────────
+
+/// Límite de gasto para una categoría (o para toda la familia si `categoriaId`
+/// es null) durante un periodo. `desde`/`hasta` son meses normalizados al día 1;
+/// `hasta` null significa vigencia indefinida.
+model Presupuesto {
+  id          String             @id @default(cuid())
+  familiaId   String
+  categoriaId String? // null = presupuesto global de la familia
+  casaId      String? // null = todas las casas
+  importe     Decimal            @db.Decimal(12, 2)
+  periodo     PeriodoPresupuesto @default(MENSUAL)
+  desde       DateTime
+  hasta       DateTime?
+  activo      Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  familia   Familia    @relation(fields: [familiaId], references: [id], onDelete: Cascade)
+  categoria Categoria? @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+  casa      Casa?      @relation(fields: [casaId], references: [id], onDelete: Cascade)
+
+  @@unique([familiaId, categoriaId, casaId, periodo, desde])
+  @@index([familiaId])
+}
+
+// ─────────────────────────────── Facturas ────────────────────────────
+
+model Factura {
+  id               String      @id @default(cuid())
+  familiaId        String
+  casaId           String?
+  gastoId          String?     @unique // enlace opcional a un gasto
+  emisor           String?
+  numeroFactura    String?
+  fechaEmision     DateTime?
+  fechaVencimiento DateTime?
+  estadoPago       EstadoPago  @default(PENDIENTE)
+  archivoPath      String // ruta relativa dentro del almacén local
+  archivoNombre    String
+  archivoTipo      TipoArchivo
+  datosExtra       Json? // p. ej. { "consumoKwh": 320, "periodo": "2026-06" }
+  /// Sellos del circuito con el inquilino: cuándo se le compartió y cuándo
+  /// dijo haberla pagado. El estado real de pago lo confirma el propietario.
+  compartidaAt     DateTime?
+  pagoDeclaradoAt  DateTime?
+  ocrEstado        OcrEstado   @default(NO_PROCESADO)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  familia Familia @relation(fields: [familiaId], references: [id], onDelete: Cascade)
+  casa    Casa?   @relation(fields: [casaId], references: [id], onDelete: SetNull)
+  gasto   Gasto?  @relation(fields: [gastoId], references: [id], onDelete: SetNull)
+
+  @@index([familiaId])
+  @@index([estadoPago])
+  @@index([fechaVencimiento])
+}

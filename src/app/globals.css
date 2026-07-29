@@ -1,26 +1,342 @@
 @import "tailwindcss";
 
+/* Tailwind v4 no asocia `dark:` a la clase .dark por defecto: hay que declararlo. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ══════════════════════════════════════════════════════════════════════
+   1. Escala cruda — «Grafito y ámbar»
+   Neutros cálidos (papel), acento ámbar quemado y semánticos desaturados.
+   Estos valores no se usan directamente en componentes: solo alimentan
+   la capa semántica de abajo.
+   ══════════════════════════════════════════════════════════════════════ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Neutros cálidos: tinta sobre papel, no gris azulado */
+  --stone-25: #fbfaf8;
+  --stone-50: #f6f4f1;
+  --stone-100: #f2f0ec;
+  --stone-200: #e7e3dc;
+  --stone-300: #d6d0c6;
+  --stone-400: #a8a29a;
+  --stone-500: #78736b;
+  --stone-600: #5c5852;
+  --stone-700: #403d39;
+  --stone-800: #2a2825;
+  --stone-900: #1c1b19;
+  --stone-950: #0a0a0b;
+
+  /* Ámbar quemado — el único acento del sistema */
+  --amber-600: #a85b22;
+  --amber-500: #c07028;
+  --amber-400: #d98a45;
+
+  /* Semánticos financieros: oliva (entra) / teja (sale). Nunca semáforo. */
+  --olive-600: #4a6b3d;
+  --olive-400: #86a96f;
+  --clay-600: #a33b28;
+  --clay-400: #d9705a;
+  --ochre-600: #8a6116;
+  --ochre-400: #d4a24a;
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   2. Capa semántica
+   ══════════════════════════════════════════════════════════════════════ */
+:root {
+  color-scheme: light;
+
+  --background: var(--stone-25);
+  --foreground: var(--stone-900);
+
+  --card: #ffffff;
+  --card-foreground: var(--stone-900);
+
+  /* Rellenos hundidos: cabeceras de tabla, campos, zonas inertes */
+  --muted: var(--stone-100);
+  --muted-foreground: var(--stone-500);
+  --faint: var(--stone-400);
+
+  /* Elevación por filete, no por sombra */
+  --border: var(--stone-200);
+  --border-strong: var(--stone-300);
+  --input: var(--stone-300);
+
+  --ring: var(--amber-600);
+  --primary: var(--amber-600);
+  --primary-foreground: #fffdf9;
+  --primary-soft: color-mix(in oklab, var(--amber-600) 10%, transparent);
+
+  --success: var(--olive-600);
+  --success-foreground: #fbfdf9;
+  --danger: var(--clay-600);
+  --danger-foreground: #fffbfa;
+  --warning: var(--ochre-600);
+  --warning-foreground: #fffdf7;
+
+  /* Sombras teñidas con la tinta cálida — nunca negro puro */
+  --shadow-color: 28 27 25;
+  --radius: 0.5rem;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --background: var(--stone-950);
+  --foreground: #edebe7;
+
+  --card: #141416;
+  --card-foreground: #edebe7;
+
+  --muted: #1a1a1d;
+  --muted-foreground: #8c8880;
+  --faint: #5e5b57;
+
+  --border: #232326;
+  --border-strong: #34343a;
+  --input: #2a2a2e;
+
+  --ring: var(--amber-400);
+  --primary: var(--amber-400);
+  --primary-foreground: #17110a;
+  --primary-soft: color-mix(in oklab, var(--amber-400) 16%, transparent);
+
+  --success: var(--olive-400);
+  --success-foreground: #0d1409;
+  --danger: var(--clay-400);
+  --danger-foreground: #180806;
+  --warning: var(--ochre-400);
+  --warning-foreground: #171006;
+
+  --shadow-color: 0 0 0;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   3. Paleta de gráficas
+   Ocho matices repartidos por la rueda pero sesgados a tierra, para que
+   convivan con el papel. Valores propios en claro y oscuro porque
+   Recharts necesita colores concretos, no `var()` heredado.
+   ══════════════════════════════════════════════════════════════════════ */
+:root {
+  --chart-1: #a85b22; /* ámbar     26° */
+  --chart-2: #4a6b3d; /* oliva    100° */
+  --chart-3: #26606b; /* teal     192° */
+  --chart-4: #8e3b5c; /* vino     335° */
+  --chart-5: #86691e; /* ocre      48° */
+  --chart-6: #4c4a7c; /* índigo   245° */
+  --chart-7: #2f7a5e; /* pino     160° */
+  --chart-8: #7a4a86; /* ciruela  285° */
+  --chart-grid: color-mix(in oklab, var(--stone-500) 22%, transparent);
+  --chart-axis: var(--stone-500);
+}
+
+.dark {
+  --chart-1: #d98a45;
+  --chart-2: #86a96f;
+  --chart-3: #5fa8b8;
+  --chart-4: #d4788f;
+  --chart-5: #c4a24a;
+  --chart-6: #8a87c4;
+  --chart-7: #62be9a;
+  --chart-8: #b287c0;
+  --chart-grid: color-mix(in oklab, #8c8880 26%, transparent);
+  --chart-axis: #8c8880;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   4. Exposición a Tailwind
+   ══════════════════════════════════════════════════════════════════════ */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-faint: var(--faint);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
+  --color-chart-8: var(--chart-8);
+
+  /* Radios contenidos: el radio grande es lo que delata una plantilla */
+  --radius-xs: 0.1875rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  /* Alias del token antiguo, aún referenciado por los módulos sin migrar */
+  --radius-base: var(--radius);
+
+  --font-sans: var(--font-inter-tight), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), ui-serif, Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+  --text-2xs--letter-spacing: 0.02em;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.125rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 0.9375rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.0625rem;
+  --text-lg--line-height: 1.625rem;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 1.9rem;
+  --text-2xl--letter-spacing: -0.018em;
+  --text-3xl: 1.9375rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-3xl--letter-spacing: -0.022em;
+  --text-4xl: 2.5rem;
+  --text-4xl--line-height: 2.75rem;
+  --text-4xl--letter-spacing: -0.028em;
+  --text-5xl: 3.25rem;
+  --text-5xl--line-height: 3.4rem;
+  --text-5xl--letter-spacing: -0.032em;
+
+  --shadow-xs: 0 1px 2px -1px rgb(var(--shadow-color) / 0.08);
+  --shadow-sm:
+    0 1px 2px -1px rgb(var(--shadow-color) / 0.1),
+    0 2px 6px -2px rgb(var(--shadow-color) / 0.06);
+  --shadow-md:
+    0 2px 4px -2px rgb(var(--shadow-color) / 0.1),
+    0 8px 20px -6px rgb(var(--shadow-color) / 0.12);
+  --shadow-lg:
+    0 4px 8px -4px rgb(var(--shadow-color) / 0.12),
+    0 24px 48px -12px rgb(var(--shadow-color) / 0.2);
+
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out-quint: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --animate-overlay-in: overlay-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-overlay-out: overlay-out 140ms cubic-bezier(0.65, 0, 0.35, 1);
+  --animate-panel-in: panel-in 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-panel-out: panel-out 140ms cubic-bezier(0.65, 0, 0.35, 1);
+  --animate-pop-in: pop-in 140ms cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-pop-out: pop-out 100ms cubic-bezier(0.65, 0, 0.35, 1);
+  --animate-sheet-in: sheet-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-sheet-out: sheet-out 160ms cubic-bezier(0.65, 0, 0.35, 1);
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes overlay-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes panel-in {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.97); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes panel-out {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to { opacity: 0; transform: translate(-50%, -48%) scale(0.98); }
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes pop-out {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.98); }
+}
+@keyframes sheet-in {
+  from { opacity: 0; transform: translateX(-100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes sheet-out {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(-100%); }
+}
+@keyframes shimmer {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   5. Base
+   ══════════════════════════════════════════════════════════════════════ */
+* {
+  border-color: var(--border);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-feature-settings: "cv05" 1, "ss01" 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Toda cifra monetaria alinea en columna */
+.tnum,
+table,
+input[type="number"] {
+  font-variant-numeric: tabular-nums;
+}
+
+::selection {
+  background: var(--primary-soft);
+  color: var(--foreground);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Barras de desplazamiento discretas, en tono de tinta */
+@supports (scrollbar-width: thin) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+}
+
+/* El indicador nativo de <input type="date"> es negro y desaparece en oscuro */
+.dark input[type="date"]::-webkit-calendar-picker-indicator,
+.dark input[type="month"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) opacity(0.55);
+}
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.5;
+  cursor: pointer;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

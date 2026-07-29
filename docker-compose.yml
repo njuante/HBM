@@ -1,0 +1,40 @@
+# Levanta la app + PostgreSQL + volumen de uploads.
+# El mismo compose sirve en el servidor de casa y en Oracle Cloud (solo cambia el .env).
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hbm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hbm_dev_password}
+      POSTGRES_DB: hbm
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hbm -d hbm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://hbm:${POSTGRES_PASSWORD:-hbm_dev_password}@db:5432/hbm?schema=public"
+      UPLOADS_DIR: "/app/uploads"
+      NODE_ENV: "production"
+      # Opcional: habilita POST /api/cron/recurrencias para un cron externo.
+      CRON_SECRET: ${CRON_SECRET:-}
+    volumes:
+      - uploads_data:/app/uploads
+    ports:
+      - "3000:3000"
+
+volumes:
+  db_data:
+  uploads_data:

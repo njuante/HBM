@@ -1,0 +1,24 @@
+1, tabla de gastos
+- Id de gastos
+- Importe
+- fecha
+- concepto
+- categoria
+- subcategoria (opcional)
+- emisor
+- casa a la que esta asociada
+
+2, tabla factura
+- Ide de gasto asociado
+- pdf de la factura
+- datos varios asociados a las facturas ej consumo en mw
+- factura pagada ya
+
+3, casas
+- id de casa
+- direccion
+
+
+Ingresos son datos que queremos tener para comparar con gastos
+
+

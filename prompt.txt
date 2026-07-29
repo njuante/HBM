@@ -1,0 +1,12 @@
+queremos desarrollar una aplicacion web, El proposito de la web seria un erp para familias y casas, En la app se podran gestionar gastos e ingresos facturas y demas segun la estructura que hemos definido en datos.txt, es esta app se gestionara pero tambien servira como visor de esos datos, mostrandolos de una forma grafica, visible, intuitiva y bonita.
+valida nuestra estructura de datos y genera un plan para desarrollarla de forma agentica, durante el desarrollo iremos definiendo modulos de la aplicacion pero de momento debe tener funcionales y testeados:
+-visor de ingresos y gastos
+-entradas de gastos y de ingresos
+-visor de facturas
+-cargas de facturas pdf e imagenes
+-un apartado de vison grafica y categorias
+y todo lo relacionado con la categorizacion de gastos y facturas ademas del control de usuarios
+
+Valida el proyecto y haz sugerencias en el plan para que nosotros validemos y demos feedbak de tus aportaciones, sientete libre de sugerir modulos que veas imprescindibles
+
+
