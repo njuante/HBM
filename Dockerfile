@@ -23,16 +23,33 @@ ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
-# Artefactos de la salida standalone de Next.
+# El CLI de Prisma, que hace falta en el arranque para aplicar migraciones.
+#
+# Va ANTES de copiar la salida standalone, y a propósito: `npm init` escribe un
+# package.json y el standalone trae el suyo, que es el que tiene que mandar. Al
+# copiarlo después, el de Next se impone y el node_modules se fusiona.
+#
+# Y se instala en vez de copiar node_modules/prisma y @prisma desde el build:
+# copiarlos a mano dejaba fuera transitivas suyas —`effect` entre ellas— y el
+# contenedor moría al arrancar con «Cannot find module 'effect'», reiniciándose
+# en bucle sin llegar a migrar nunca. La versión sale del package.json del
+# proyecto para que no se desincronice con la de desarrollo.
+COPY --from=builder /app/package.json /tmp/pkg.json
+RUN VERSION=$(node -p "require('/tmp/pkg.json').devDependencies.prisma") \
+ && npm init -y > /dev/null \
+ && npm install --ignore-scripts --omit=optional --no-audit --no-fund "prisma@$VERSION" \
+ && rm -f /tmp/pkg.json \
+ && npm cache clean --force
+
+# Artefactos de la salida standalone de Next. Su package.json sustituye al que
+# dejó `npm init`, y su node_modules se mezcla con el del CLI.
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Prisma: schema + engines + migraciones para poder migrar en el arranque.
+# Schema y migraciones, para poder migrar en el arranque.
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh && mkdir -p /app/uploads && chown nextjs:nodejs /app/uploads
 
