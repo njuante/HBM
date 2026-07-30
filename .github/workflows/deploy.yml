@@ -118,6 +118,33 @@ jobs:
           CONF
           chmod 600 ~/.ssh/config
 
+      # El «Permission denied (publickey)» a secas no dice si el problema es la
+      # clave, el usuario o que falta autorizarla en el servidor. Esto acota.
+      - name: Comprobar el acceso SSH
+        env:
+          REMOTO_SSH: ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
+        run: |
+          if ! head -1 ~/.ssh/id_deploy | grep -q "PRIVATE KEY"; then
+            echo "::error::SSH_KEY no parece una clave privada. Tiene que ser el fichero sin «.pub», con sus líneas BEGIN y END."
+            exit 1
+          fi
+
+          # La huella es pública: sirve para cotejarla con authorized_keys.
+          huella=$(ssh-keygen -lf ~/.ssh/id_deploy | awk '{print $2}')
+          echo "Clave de despliegue: $huella"
+
+          if ssh -i ~/.ssh/id_deploy -o BatchMode=yes "$REMOTO_SSH" 'echo "Conectado como $(whoami) en $(hostname)"'; then
+            exit 0
+          fi
+
+          echo "::error::El servidor rechaza la clave. Comprueba, en este orden:"
+          echo "  1. Que SSH_USER es el correcto (en Oracle suele ser 'ubuntu' u 'opc', nunca 'root')."
+          echo "  2. Que la clave está autorizada:  ssh-copy-id -i ~/.ssh/hbm_deploy.pub USUARIO@IP"
+          echo "  3. Que esta huella aparece en ~/.ssh/authorized_keys del servidor:"
+          echo "     $huella"
+          echo "     Compruébalo con:  ssh-keygen -lf ~/.ssh/authorized_keys"
+          exit 1
+
       - name: Copiar compose y Caddyfile
         env:
           DESTINO: ${{ vars.DEPLOY_PATH || '/www/apps/hbm' }}
