@@ -72,7 +72,7 @@ Hay dos formas de poner ese proxy, y en este servidor manda aaPanel:
 
 ### Con aaPanel (lo que aplica aquí)
 
-En aaPanel: **Website → Add site** con el dominio `nucahome.me`, y dentro del sitio:
+En aaPanel: **Website → Add site** con el dominio `procesozero.es`, y dentro del sitio:
 
 1. **SSL → Let's Encrypt** para emitir el certificado, y activa *Force HTTPS*.
 2. **Reverse proxy → Add**, destino `http://127.0.0.1:33000` (o el que hayas puesto en `APP_PORT`).
@@ -93,7 +93,7 @@ En aaPanel: **Website → Add site** con el dominio `nucahome.me`, y dentro del 
 
 ### Preparar el servidor (una sola vez)
 
-1. **DNS**: en Cloudflare, registro **A** de `nucahome.me` → IP pública de la instancia, con
+1. **DNS**: en Cloudflare, registro **A** de `procesozero.es` → IP pública de la instancia, con
    **Proxy status: DNS only** (nube gris). Con la nube naranja Cloudflare corta el TLS por su
    cuenta y el reto de Let's Encrypt no llega al servidor.
 
@@ -125,7 +125,7 @@ En aaPanel: **Website → Add site** con el dominio `nucahome.me`, y dentro del 
    cd /www/apps/hbm
    # Hexadecimal a propósito: la contraseña viaja dentro de DATABASE_URL, y un
    # `@`, `:` o `/` la partiría en dos al interpretarse la URL.
-   printf 'POSTGRES_PASSWORD=%s\nDOMAIN=nucahome.me\n' "$(openssl rand -hex 32)" > .env
+   printf 'POSTGRES_PASSWORD=%s\nDOMAIN=procesozero.es\n' "$(openssl rand -hex 32)" > .env
    chmod 600 .env
    ```
 

@@ -208,7 +208,7 @@ jobs:
 
       - name: Comprobar que responde
         run: |
-          dominio="${{ vars.DOMAIN || 'nucahome.me' }}"
+          dominio="${{ vars.DOMAIN || 'procesozero.es' }}"
           for intento in $(seq 1 10); do
             codigo=$(curl -sS -o /dev/null -w '%{http_code}' "https://$dominio/login" || echo 000)
             if [ "$codigo" = "200" ]; then
