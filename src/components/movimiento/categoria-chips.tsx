@@ -43,6 +43,31 @@ export function CategoriaChips({
   const elegida = categorias.find((c) => c.id === value);
   const subs = elegida?.subcategorias ?? [];
 
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLDivElement>,
+    items: { id: string }[],
+    currentId: string,
+    setFn: (id: string) => void,
+    isSub = false,
+  ) => {
+    if (["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(e.key)) {
+      e.preventDefault();
+      const idx = items.findIndex((item) => item.id === currentId);
+      let nextIdx = idx;
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        nextIdx = idx < items.length - 1 ? idx + 1 : 0;
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        nextIdx = idx > 0 ? idx - 1 : items.length - 1;
+      }
+      if (items[nextIdx]) {
+        setFn(items[nextIdx].id);
+        if (isSub) onSubChange?.("");
+        const buttons = e.currentTarget.querySelectorAll("button");
+        buttons[nextIdx]?.focus();
+      }
+    }
+  };
+
   return (
     <div className="space-y-2">
       <input type="hidden" name={name} value={value} />
@@ -51,7 +76,9 @@ export function CategoriaChips({
         role="radiogroup"
         aria-label="Categoría"
         aria-invalid={invalido}
-        className="flex flex-wrap gap-1.5"
+        tabIndex={0}
+        onKeyDown={(e) => handleKeyDown(e, categorias, value, onChange, true)}
+        className="flex flex-wrap gap-1.5 focus:outline-none"
       >
         {categorias.map((c) => (
           <Ficha
@@ -74,7 +101,9 @@ export function CategoriaChips({
           <div
             role="radiogroup"
             aria-label="Subcategoría"
-            className="flex flex-wrap gap-1.5 border-l-2 border-border pl-2.5"
+            tabIndex={0}
+            onKeyDown={(e) => handleKeyDown(e, subs, subValue ?? "", onSubChange)}
+            className="flex flex-wrap gap-1.5 border-l-2 border-border pl-2.5 focus:outline-none"
           >
             {subs.map((s) => (
               <Ficha

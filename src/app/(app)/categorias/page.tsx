@@ -1,7 +1,6 @@
 import { requireFamilia, puedeGestionar } from "@/server/auth/dal";
 import { listCategorias } from "@/server/db/categorias";
 import { TipoCategoria } from "@/generated/prisma/enums";
-import { PageHeader } from "@/components/page-header";
 import { CategoriasClient, type CategoriaNodo } from "./categorias-client";
 
 type Raw = Awaited<ReturnType<typeof listCategorias>>[number];
@@ -31,16 +30,10 @@ export default async function CategoriasPage() {
   ]);
 
   return (
-    <div>
-      <PageHeader
-        title="Categorías"
-        description="Organiza y colorea las categorías de gastos e ingresos."
-      />
-      <CategoriasClient
+    <CategoriasClient
         gastos={gastos.map(toNodo)}
         ingresos={ingresos.map(toNodo)}
         puedeGestionar={puedeGestionar(ctx)}
       />
-    </div>
   );
 }

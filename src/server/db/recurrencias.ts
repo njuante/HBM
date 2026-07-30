@@ -274,6 +274,17 @@ export async function asegurarRecurrencias(familiaId: string): Promise<void> {
   }
 }
 
+/**
+ * Levanta el freno para esa familia.
+ *
+ * El freno mide tiempo, no cambios: sin esto, crear una recurrencia con fecha
+ * pasada no genera nada hasta diez minutos después, porque cualquier visita
+ * anterior al panel ya había marcado la familia como puesta al día.
+ */
+export function invalidarPasada(familiaId: string): void {
+  ultimaPasada.delete(familiaId);
+}
+
 /** Materializa todas las familias. Solo para el endpoint de cron. */
 export async function materializarTodas(): Promise<ResultadoMaterializacion> {
   const familias = await prisma.familia.findMany({ select: { id: true } });
@@ -412,7 +423,10 @@ function aDatos(data: RecurrenciaInput) {
     metodoPago: data.tipo === "GASTO" ? (data.metodoPago ?? null) : null,
     frecuencia: data.frecuencia,
     intervalo: data.intervalo,
-    diaMes: data.diaMes ?? null,
+    // Si no se dice, el día lo fija la primera fecha. Guardarlo explícito es lo
+    // que hace que un recibo del 31 se recorte al último día en los meses
+    // cortos y vuelva al 31 en los largos.
+    diaMes: data.diaMes ?? data.proximaFecha.getDate(),
     proximaFecha: aDia(data.proximaFecha),
     fin: data.fin ? aDia(data.fin) : null,
     automatica: data.automatica,
@@ -430,6 +444,7 @@ export async function crearRecurrencia(
   const r = await prisma.recurrencia.create({
     data: { familiaId, usuarioId, ...aDatos(data) },
   });
+  invalidarPasada(familiaId);
   return { ok: true, id: r.id };
 }
 
@@ -448,6 +463,7 @@ export async function actualizarRecurrencia(
     where: { id, familiaId },
     data: aDatos(data),
   });
+  invalidarPasada(familiaId);
   return { ok: true, id };
 }
 
@@ -460,6 +476,7 @@ export async function cambiarActivaRecurrencia(
     where: { id, familiaId },
     data: { activa },
   });
+  invalidarPasada(familiaId);
   return res.count > 0;
 }
 
@@ -473,4 +490,57 @@ export async function eliminarRecurrencia(
 ): Promise<boolean> {
   const res = await prisma.recurrencia.deleteMany({ where: { id, familiaId } });
   return res.count > 0;
+}
+
+/**
+ * Convierte un gasto existente/importado en una plantilla de suscripción/recurrencia activa.
+ */
+export async function vincularGastoARecurrencia(
+  familiaId: string,
+  usuarioId: string,
+  gastoId: string,
+  frecuencia: "MENSUAL" | "ANUAL" | "SEMANAL" = "MENSUAL",
+  automatica = true,
+): Promise<Result> {
+  const gasto = await prisma.gasto.findFirst({
+    where: { id: gastoId, familiaId },
+  });
+  if (!gasto) return { ok: false, error: "Gasto no encontrado." };
+
+  const proximaFecha = siguienteFecha(
+    aDia(gasto.fecha),
+    frecuencia,
+    1,
+    gasto.fecha.getDate(),
+  );
+
+  const r = await prisma.recurrencia.create({
+    data: {
+      familiaId,
+      usuarioId,
+      tipo: "GASTO",
+      casaId: gasto.casaId,
+      categoriaId: gasto.categoriaId,
+      subcategoriaId: gasto.subcategoriaId,
+      importe: gasto.importe,
+      concepto: gasto.concepto,
+      contraparte: gasto.emisor,
+      metodoPago: gasto.metodoPago,
+      frecuencia,
+      intervalo: 1,
+      diaMes: gasto.fecha.getDate(),
+      proximaFecha,
+      automatica,
+      activa: true,
+    },
+  });
+
+  // Vincular el gasto original a esta nueva recurrencia
+  await prisma.gasto.update({
+    where: { id: gasto.id },
+    data: { recurrente: true, recurrenciaId: r.id },
+  });
+
+  invalidarPasada(familiaId);
+  return { ok: true, id: r.id };
 }

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ChevronDown, HousePlus } from "lucide-react";
+import { HousePlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toDateInputValue } from "@/lib/format";
 import { formatEUR } from "@/lib/money";
@@ -11,7 +11,6 @@ import {
   Dialog,
   DialogBody,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -21,6 +20,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Segmented } from "@/components/ui/segmented";
+import { MasOpciones } from "@/components/ui/mas-opciones";
 import { FieldError, FormError } from "@/components/ui/field";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ComboboxTexto, type ComboOption } from "@/components/ui/combobox";
@@ -29,6 +30,8 @@ import { FechaChips } from "./fecha-chips";
 import { CategoriaChips, type CategoriaChip } from "./categoria-chips";
 
 export type CasaOpt = { id: string; nombre: string };
+
+export type Tipo = "GASTO" | "INGRESO";
 
 /** Lo que queda de un presupuesto, para enseñarlo al elegir la categoría. */
 export type PresupuestoRestante = { restante: number; importe: number };
@@ -48,6 +51,7 @@ export type SugerenciaMovimiento = {
 
 export type MovimientoDefaults = {
   id?: string;
+  tipo?: Tipo;
   importe?: number;
   fecha?: string;
   concepto?: string;
@@ -71,31 +75,34 @@ const esMac = () =>
   typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 
 export function MovimientoDialog({
-  tipo,
+  tipoInicial,
   abierto,
   onOpenChange,
   action,
-  categorias,
+  categoriasGasto,
+  categoriasIngreso,
   casas,
-  sugerencias = [],
+  sugerenciasGasto = [],
+  sugerenciasIngreso = [],
   defaults,
-  camposGasto = false,
   presupuestos,
 }: {
-  tipo: "gasto" | "ingreso";
+  tipoInicial: Tipo;
   abierto: boolean;
   onOpenChange: (v: boolean) => void;
   action: (prev: FormState, fd: FormData) => Promise<FormState>;
-  categorias: CategoriaChip[];
+  categoriasGasto: CategoriaChip[];
+  categoriasIngreso: CategoriaChip[];
   casas: CasaOpt[];
-  sugerencias?: SugerenciaMovimiento[];
+  sugerenciasGasto?: SugerenciaMovimiento[];
+  sugerenciasIngreso?: SugerenciaMovimiento[];
   defaults?: MovimientoDefaults;
-  /** Los gastos añaden método de pago y exigen casa. */
-  camposGasto?: boolean;
   /** Presupuesto vigente por categoría raíz, para avisar en el momento del alta. */
   presupuestos?: Record<string, PresupuestoRestante>;
 }) {
   const editando = Boolean(defaults?.id);
+  // Al editar, el tipo es el que ya tenía y no se cambia: son tablas distintas.
+  const [tipo, setTipo] = React.useState<Tipo>(defaults?.tipo ?? tipoInicial);
   // Remontar el formulario lo resetea por completo: es la vía limpia de
   // «guardar y crear otro» con campos no controlados.
   const [generacion, setGeneracion] = React.useState(0);
@@ -106,27 +113,23 @@ export function MovimientoDialog({
         <DialogHeader>
           <DialogTitle>
             {editando
-              ? `Editar ${tipo}`
-              : tipo === "gasto"
-                ? "Nuevo gasto"
-                : "Nuevo ingreso"}
+              ? tipo === "GASTO"
+                ? "Editar gasto"
+                : "Editar ingreso"
+              : "Nuevo movimiento"}
           </DialogTitle>
-          <DialogDescription>
-            {editando
-              ? "Modifica lo que necesites y guarda."
-              : "Importe y categoría bastan; el resto se rellena solo."}
-          </DialogDescription>
         </DialogHeader>
 
         <Formulario
-          key={generacion}
+          key={`${tipo}-${generacion}`}
           tipo={tipo}
+          onTipoChange={setTipo}
+          conmutador={!editando}
           action={action}
-          categorias={categorias}
+          categorias={tipo === "GASTO" ? categoriasGasto : categoriasIngreso}
           casas={casas}
-          sugerencias={sugerencias}
+          sugerencias={tipo === "GASTO" ? sugerenciasGasto : sugerenciasIngreso}
           defaults={defaults}
-          camposGasto={camposGasto}
           presupuestos={presupuestos}
           editando={editando}
           onHecho={(continuar) => {
@@ -141,27 +144,30 @@ export function MovimientoDialog({
 
 function Formulario({
   tipo,
+  onTipoChange,
+  conmutador,
   action,
   categorias,
   casas,
   sugerencias,
   defaults,
-  camposGasto,
   presupuestos,
   editando,
   onHecho,
 }: {
-  tipo: "gasto" | "ingreso";
+  tipo: Tipo;
+  onTipoChange: (t: Tipo) => void;
+  conmutador: boolean;
   action: (prev: FormState, fd: FormData) => Promise<FormState>;
   categorias: CategoriaChip[];
   casas: CasaOpt[];
   sugerencias: SugerenciaMovimiento[];
   defaults?: MovimientoDefaults;
-  camposGasto: boolean;
   presupuestos?: Record<string, PresupuestoRestante>;
   editando: boolean;
   onHecho: (continuar: boolean) => void;
 }) {
+  const camposGasto = tipo === "GASTO";
   const [estado, setEstado] = React.useState<FormState>(undefined);
   const [enviando, setEnviando] = React.useState(false);
 
@@ -171,6 +177,8 @@ function Formulario({
   const continuarRef = React.useRef(false);
 
   const [concepto, setConcepto] = React.useState(defaults?.concepto ?? "");
+  const [importe, setImporte] = React.useState(defaults?.importe ? String(defaults.importe) : "");
+  const [mesesProrrateo, setMesesProrrateo] = React.useState<number>(1);
   const [fecha, setFecha] = React.useState(
     defaults?.fecha ?? toDateInputValue(new Date()),
   );
@@ -184,7 +192,6 @@ function Formulario({
   );
   const [origen, setOrigen] = React.useState(defaults?.origen ?? "");
   const [metodoPago, setMetodoPago] = React.useState(defaults?.metodoPago ?? "");
-  const [detalles, setDetalles] = React.useState(false);
 
   const sinCasas = camposGasto && casas.length === 0;
 
@@ -228,6 +235,27 @@ function Formulario({
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       enviarCon(e.shiftKey && !editando);
+    } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      const current = document.activeElement as HTMLElement;
+      const esSelect = current?.tagName === "SELECT";
+      const esComboboxAbierto = current?.getAttribute("aria-expanded") === "true";
+
+      if (!esSelect && !esComboboxAbierto) {
+        e.preventDefault();
+        const focusables = Array.from(
+          formRef.current?.querySelectorAll<HTMLElement>(
+            "input:not([type=hidden]), button, select, [tabindex='0']",
+          ) || [],
+        ).filter((el) => !el.hasAttribute("disabled"));
+        const index = focusables.indexOf(current);
+        if (index !== -1) {
+          const next =
+            e.key === "ArrowDown"
+              ? focusables[index + 1] || focusables[0]
+              : focusables[index - 1] || focusables[focusables.length - 1];
+          next?.focus();
+        }
+      }
     }
   };
 
@@ -255,6 +283,20 @@ function Formulario({
       {defaults?.id && <input type="hidden" name="id" value={defaults.id} />}
 
       <DialogBody className="space-y-4">
+        <input type="hidden" name="tipo" value={tipo} />
+
+        {conmutador && (
+          <Segmented
+            ariaLabel="Tipo de movimiento"
+            value={tipo}
+            onChange={onTipoChange}
+            options={[
+              { value: "GASTO", label: "Gasto" },
+              { value: "INGRESO", label: "Ingreso" },
+            ]}
+          />
+        )}
+
         <div>
           <ImporteInput
             id="mov-importe"
@@ -284,9 +326,8 @@ function Formulario({
             onValueChange={setConcepto}
             onSelect={aplicarSugerencia}
             options={opciones}
-            required
             placeholder={
-              tipo === "gasto" ? "Compra semanal, luz…" : "Nómina, alquiler…"
+              camposGasto ? "Compra semanal, luz…" : "Nómina, alquiler…"
             }
             vacio="Sin usos anteriores"
           />
@@ -309,61 +350,33 @@ function Formulario({
           <RestantePresupuesto info={presupuestos?.[categoriaId]} />
         </div>
 
-        <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
-          <div>
-            <p className="mb-1.5 text-xs font-medium text-muted-foreground">Fecha</p>
-            <FechaChips value={fecha} onChange={setFecha} />
-            <FieldError>{estado?.errors?.fecha?.[0]}</FieldError>
-          </div>
-
-          {casas.length > 1 ? (
-            <div>
+        <MasOpciones>
+          {camposGasto && !editando && (
+            <div className="sm:col-span-2 rounded-lg border border-border bg-muted/20 p-2.5 space-y-1">
               <label
-                htmlFor="mov-casa"
-                className="mb-1.5 block text-xs font-medium text-muted-foreground"
+                htmlFor="mov-prorrateo"
+                className="block text-2xs font-semibold uppercase tracking-wider text-muted-foreground"
               >
-                Casa
+                Periodo de la factura (Dividir en varios meses)
               </label>
-              <Select
-                id="mov-casa"
-                name="casaId"
-                value={casaId}
-                onChange={(e) => setCasaId(e.target.value)}
-                className="h-8 w-auto min-w-36 text-xs"
+              <select
+                id="mov-prorrateo"
+                name="mesesProrrateo"
+                value={mesesProrrateo}
+                onChange={(e) => setMesesProrrateo(Number(e.target.value))}
+                className="w-full h-8 text-xs rounded border border-border bg-card px-2.5 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               >
-                {!camposGasto && <option value="">Sin casa</option>}
-                {camposGasto && <option value="">Selecciona…</option>}
-                {casas.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nombre}
-                  </option>
-                ))}
-              </Select>
-              <FieldError>{estado?.errors?.casaId?.[0]}</FieldError>
-            </div>
-          ) : (
-            <input type="hidden" name="casaId" value={casaId} />
-          )}
-        </div>
-
-        <div className="border-t border-border pt-3">
-          <button
-            type="button"
-            onClick={() => setDetalles((d) => !d)}
-            aria-expanded={detalles}
-            className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ChevronDown
-              className={cn(
-                "size-3.5 transition-transform duration-150",
-                detalles && "rotate-180",
+                <option value="1">1 mes (Gasto mensual estándar)</option>
+                <option value="2">2 meses (Factura bimensual - Dividir en 2 cuotas)</option>
+                <option value="3">3 meses (Factura trimestral - Dividir en 3 cuotas)</option>
+              </select>
+              {mesesProrrateo > 1 && (
+                <p className="text-2xs text-emerald-500 font-medium pt-0.5">
+                  Dividirá {importe ? `${importe} €` : "el importe"} en {mesesProrrateo} cuotas mensuales consecutivas de {importe ? `${(Number(importe) / mesesProrrateo).toFixed(2)} €` : "igual valor"}.
+                </p>
               )}
-            />
-            Más detalles
-          </button>
-
-          {detalles && (
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            </div>
+          )}
               <div>
                 <label
                   htmlFor="mov-origen"
@@ -411,13 +424,17 @@ function Formulario({
                 <Switch
                   name="recurrente"
                   defaultChecked={defaults?.recurrente}
-                  aria-label="Se repite cada mes"
+                  aria-label="Marcar como periódico"
                 />
-                <span>Se repite cada mes</span>
+                <span className="text-xs text-muted-foreground">
+                  Marcarlo como periódico. Para que se apunte solo cada mes, usa{" "}
+                  <strong className="font-medium text-foreground">
+                    Convertir en recurrente
+                  </strong>{" "}
+                  desde su fila.
+                </span>
               </div>
-            </div>
-          )}
-        </div>
+        </MasOpciones>
 
         {estado?.message && <FormError>{estado.message}</FormError>}
       </DialogBody>
@@ -447,7 +464,7 @@ function Formulario({
               disabled={enviando}
               onClick={() => enviarCon(true)}
             >
-              Guardar y otro
+              Añadir y otro
             </Button>
           )}
           <Button
@@ -456,7 +473,7 @@ function Formulario({
             disabled={enviando}
             onClick={() => enviarCon(false)}
           >
-            {editando ? "Guardar cambios" : `Guardar ${tipo}`}
+            {editando ? "Guardar cambios" : camposGasto ? "Añadir gasto" : "Añadir ingreso"}
           </Button>
         </div>
       </DialogFooter>

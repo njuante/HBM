@@ -18,9 +18,12 @@ import {
 import { formatFecha, toDateInputValue } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Money } from "@/components/ui/money";
+import { useToast } from "@/components/ui/toast";
 import { SwitchEnvio } from "@/components/ui/switch-envio";
 import { Segmented } from "@/components/ui/segmented";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -56,6 +59,7 @@ export type FacturaItem = {
   fechaEmision: string | null;
   fechaVencimiento: string | null;
   estadoPago: "PENDIENTE" | "PAGADA";
+  importe: number | null;
   archivoTipo: "PDF" | "IMAGEN";
   casa: { id: string; nombre: string } | null;
   gasto: { id: string; concepto: string } | null;
@@ -81,6 +85,7 @@ export function FacturasClient({
   filtros,
   alquileresActivo,
   puedeGestionar,
+  abrirNuevo,
 }: {
   items: FacturaItem[];
   casas: Opt[];
@@ -88,11 +93,13 @@ export function FacturasClient({
   filtros: Filtros;
   alquileresActivo: boolean;
   puedeGestionar: boolean;
+  /** Llega desde la paleta de comandos. */
+  abrirNuevo?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const [subiendo, setSubiendo] = React.useState(false);
+  const [subiendo, setSubiendo] = React.useState(Boolean(abrirNuevo));
   const [editando, setEditando] = React.useState<FacturaItem | null>(null);
   const [texto, setTexto] = React.useState(filtros.texto ?? "");
 
@@ -107,7 +114,18 @@ export function FacturasClient({
   };
 
   return (
-    <>
+    <div>
+      <PageHeader
+        title="Facturas"
+        description="El PDF o la foto de cada recibo, con su vencimiento."
+        action={
+          <Button onClick={() => setSubiendo(true)}>
+            <Upload />
+            Subir factura
+          </Button>
+        }
+      />
+
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <form
           onSubmit={(e) => {
@@ -134,10 +152,6 @@ export function FacturasClient({
           options={[...ESTADOS]}
         />
 
-        <Button className="ml-auto" onClick={() => setSubiendo(true)}>
-          <Upload />
-          Subir factura
-        </Button>
       </div>
 
       <Card className="overflow-hidden">
@@ -169,7 +183,9 @@ export function FacturasClient({
                   <TH className="w-10" />
                   <TH>Emisor</TH>
                   <TH className="w-28">Vence</TH>
-                  <TH>Casa</TH>
+                  <TH numerico className="w-28">
+                    Importe
+                  </TH>
                   <TH className="w-24">Pagada</TH>
                   <TH className="w-10" />
                 </TR>
@@ -190,7 +206,7 @@ export function FacturasClient({
       </Card>
 
       <Dialog open={subiendo} onOpenChange={setSubiendo}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Subir factura</DialogTitle>
           </DialogHeader>
@@ -205,7 +221,7 @@ export function FacturasClient({
       </Dialog>
 
       <Dialog open={editando !== null} onOpenChange={(v) => !v && setEditando(null)}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Editar factura</DialogTitle>
           </DialogHeader>
@@ -239,7 +255,7 @@ export function FacturasClient({
           )}
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
 
@@ -254,6 +270,7 @@ function Fila({
   compartible: boolean;
 }) {
   const [confirmando, setConfirmando] = React.useState(false);
+  const { avisar } = useToast();
 
   const vencida =
     f.estadoPago === "PENDIENTE" &&
@@ -293,10 +310,14 @@ function Fila({
           )}
         </div>
         <span className="text-2xs text-faint">
-          {f.numeroFactura && f.emisor ? `Nº ${f.numeroFactura}` : null}
-          {f.gasto && (f.numeroFactura && f.emisor ? " · " : "")}
-          {f.gasto?.concepto}
-          {f.periodo && ` · ${f.periodo}`}
+          {[
+            f.numeroFactura && f.emisor ? `Nº ${f.numeroFactura}` : null,
+            f.casa?.nombre,
+            f.gasto?.concepto,
+            f.periodo,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
         </span>
       </TD>
 
@@ -309,8 +330,12 @@ function Fila({
         {f.fechaVencimiento ? formatFecha(f.fechaVencimiento) : "—"}
       </TD>
 
-      <TD className="truncate text-xs text-muted-foreground">
-        {f.casa?.nombre ?? "—"}
+      <TD numerico>
+        {f.importe !== null ? (
+          <Money value={f.importe} className="font-medium" />
+        ) : (
+          <span className="text-faint">—</span>
+        )}
       </TD>
 
       <TD>
@@ -391,6 +416,7 @@ function Fila({
             const fd = new FormData();
             fd.set("id", f.id);
             void eliminarFacturaAction(fd);
+            avisar(`Factura de ${nombre} eliminada`);
           }}
         />
       </TD>

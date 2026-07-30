@@ -3,7 +3,6 @@ import { listFacturas, gastosSinFactura } from "@/server/db/facturas";
 import { listCasas } from "@/server/db/casas";
 import { facturaFiltrosSchema, parseDatosExtra } from "@/lib/validation/factura";
 import { formatFecha } from "@/lib/format";
-import { PageHeader } from "@/components/page-header";
 import { FacturasClient, type FacturaItem } from "./facturas-client";
 
 export default async function FacturasPage(props: {
@@ -32,6 +31,7 @@ export default async function FacturasPage(props: {
       fechaEmision: f.fechaEmision ? f.fechaEmision.toISOString() : null,
       fechaVencimiento: f.fechaVencimiento ? f.fechaVencimiento.toISOString() : null,
       estadoPago: f.estadoPago,
+      importe: f.importe ? Number(f.importe) : null,
       archivoTipo: f.archivoTipo,
       casa: f.casa,
       gasto: f.gasto,
@@ -44,12 +44,7 @@ export default async function FacturasPage(props: {
   });
 
   return (
-    <div>
-      <PageHeader
-        title="Facturas"
-        description="Sube y consulta las facturas de tu hogar (PDF o imagen)."
-      />
-      <FacturasClient
+    <FacturasClient
         alquileresActivo={ctx.alquileresActivo}
         puedeGestionar={puedeGestionar(ctx)}
         items={items}
@@ -60,6 +55,5 @@ export default async function FacturasPage(props: {
         }))}
         filtros={filtros}
       />
-    </div>
   );
 }

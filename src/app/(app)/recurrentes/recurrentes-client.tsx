@@ -11,6 +11,8 @@ import {
   X,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
+import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -20,6 +22,7 @@ import { Switch } from "@/components/ui/switch";
 import { Segmented } from "@/components/ui/segmented";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field, FormError } from "@/components/ui/field";
+import { MasOpciones } from "@/components/ui/mas-opciones";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { ConfirmarAccion } from "@/components/ui/alert-dialog";
 import { MarcaCategoria } from "@/components/ui/icono-categoria";
@@ -53,6 +56,8 @@ import type {
   RecurrenciaDTO,
 } from "@/lib/validation/recurrencia";
 import { PropuestasPendientes } from "@/components/propuestas-pendientes";
+import type { ResumenPagosHormiga } from "@/server/db/pagos-hormiga";
+import { PagosHormigaChart } from "@/components/charts/pagos-hormiga-chart";
 import {
   actualizarRecurrenciaAction,
   cambiarActivaAction,
@@ -92,6 +97,8 @@ export function RecurrentesClient({
   categoriasIngreso,
   puedeGestionar,
   borrador,
+  abrirNuevo,
+  pagosHormiga,
 }: {
   items: RecurrenciaDTO[];
   propuestas: PropuestaDTO[];
@@ -100,88 +107,117 @@ export function RecurrentesClient({
   categoriasIngreso: CategoriaChip[];
   puedeGestionar: boolean;
   borrador?: BorradorRecurrencia;
+  /** Llega desde la paleta de comandos. */
+  abrirNuevo?: boolean;
+  pagosHormiga: ResumenPagosHormiga;
 }) {
+  const [tabPrincipal, setTabPrincipal] = React.useState<"SUSCRIPCIONES" | "HORMIGA">("SUSCRIPCIONES");
   const [tipo, setTipo] = React.useState<Tipo>(borrador?.tipo ?? "GASTO");
   const [editando, setEditando] = React.useState<RecurrenciaDTO | null>(null);
   // Con borrador el diálogo nace abierto: se viene de pulsar «convertir».
-  const [creando, setCreando] = React.useState(Boolean(borrador));
+  const [creando, setCreando] = React.useState(Boolean(borrador) || Boolean(abrirNuevo));
 
   const visibles = items.filter((r) => r.tipo === tipo);
 
   return (
-    <>
-      {propuestas.length > 0 && (
-        <PropuestasPendientes propuestas={propuestas} className="mb-5" />
-      )}
+    <div>
+      <PageHeader
+        title="Recurrentes y Suscripciones"
+        description="Control de servicios suscritos, cobros periódicos y análisis de micro-pagos hormiga."
+        action={
+          puedeGestionar && (
+            <Button onClick={() => setCreando(true)}>
+              <Plus />
+              Nueva recurrencia
+            </Button>
+          )
+        }
+      />
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-5">
         <Segmented
-          ariaLabel="Tipo de recurrencia"
-          value={tipo}
-          onChange={setTipo}
+          ariaLabel="Vista principal"
+          value={tabPrincipal}
+          onChange={(v) => setTabPrincipal(v as "SUSCRIPCIONES" | "HORMIGA")}
           options={[
-            { value: "GASTO", label: "Gastos" },
-            { value: "INGRESO", label: "Ingresos" },
+            { value: "SUSCRIPCIONES", label: "Suscripciones y Recurrentes" },
+            { value: "HORMIGA", label: "Análisis Pagos Hormiga 🐜" },
           ]}
         />
-        {puedeGestionar && (
-          <Button onClick={() => setCreando(true)}>
-            <Plus />
-            Nueva recurrencia
-          </Button>
-        )}
       </div>
 
-      <Card className="overflow-hidden">
-        {visibles.length === 0 ? (
-          <EmptyState
-            icon={Repeat}
-            titulo={
-              tipo === "GASTO" ? "Sin gastos recurrentes" : "Sin ingresos recurrentes"
-            }
-            descripcion={
-              tipo === "GASTO"
-                ? "El alquiler, la cuota del gimnasio o la factura de la luz se apuntan una vez y se repiten solas."
-                : "La nómina o el alquiler que cobras entran solos cada mes."
-            }
-            accion={
-              puedeGestionar && (
-                <Button size="sm" onClick={() => setCreando(true)}>
-                  <Plus />
-                  Nueva recurrencia
-                </Button>
-              )
-            }
-          />
-        ) : (
-          <TableWrap>
-            <Table>
-              <THead>
-                <TR className="hover:bg-transparent">
-                  <TH>Concepto</TH>
-                  <TH>Cada</TH>
-                  <TH className="w-28">Próxima</TH>
-                  <TH numerico className="w-28">
-                    Importe
-                  </TH>
-                  <TH className="w-20">Estado</TH>
-                  <TH className="w-10" />
-                </TR>
-              </THead>
-              <TBody>
-                {visibles.map((r) => (
-                  <FilaRecurrencia
-                    key={r.id}
-                    r={r}
-                    puedeGestionar={puedeGestionar}
-                    onEditar={() => setEditando(r)}
-                  />
-                ))}
-              </TBody>
-            </Table>
-          </TableWrap>
-        )}
-      </Card>
+      {tabPrincipal === "HORMIGA" ? (
+        <PagosHormigaChart data={pagosHormiga} />
+      ) : (
+        <>
+          {propuestas.length > 0 && (
+            <PropuestasPendientes propuestas={propuestas} className="mb-5" />
+          )}
+
+          <div className="mb-4">
+            <Segmented
+              ariaLabel="Tipo de recurrencia"
+              value={tipo}
+              onChange={setTipo}
+              options={[
+                { value: "GASTO", label: "Gastos" },
+                { value: "INGRESO", label: "Ingresos" },
+              ]}
+            />
+          </div>
+
+          <Card className="overflow-hidden">
+            {visibles.length === 0 ? (
+              <EmptyState
+                icon={Repeat}
+                titulo={
+                  tipo === "GASTO" ? "Sin gastos recurrentes" : "Sin ingresos recurrentes"
+                }
+                descripcion={
+                  tipo === "GASTO"
+                    ? "El alquiler, la cuota del gimnasio o la factura de la luz se apuntan una vez y se repiten solas."
+                    : "La nómina o el alquiler que cobras entran solos cada mes."
+                }
+                accion={
+                  puedeGestionar && (
+                    <Button size="sm" onClick={() => setCreando(true)}>
+                      <Plus />
+                      Nueva recurrencia
+                    </Button>
+                  )
+                }
+              />
+            ) : (
+              <TableWrap>
+                <Table>
+                  <THead>
+                    <TR className="hover:bg-transparent">
+                      <TH>Concepto</TH>
+                      <TH>Cada</TH>
+                      <TH className="w-28">Próxima</TH>
+                      <TH numerico className="w-28">
+                        Importe
+                      </TH>
+                      <TH className="w-20">Estado</TH>
+                      <TH className="w-10" />
+                    </TR>
+                  </THead>
+                  <TBody>
+                    {visibles.map((r) => (
+                      <FilaRecurrencia
+                        key={r.id}
+                        r={r}
+                        puedeGestionar={puedeGestionar}
+                        onEditar={() => setEditando(r)}
+                      />
+                    ))}
+                  </TBody>
+                </Table>
+              </TableWrap>
+            )}
+          </Card>
+        </>
+      )}
 
       <RecurrenciaDialog
         abierto={creando}
@@ -204,7 +240,7 @@ export function RecurrentesClient({
         categoriasGasto={categoriasGasto}
         categoriasIngreso={categoriasIngreso}
       />
-    </>
+    </div>
   );
 }
 
@@ -221,6 +257,7 @@ function FilaRecurrencia({
 }) {
   const { resolvedTheme } = useTheme();
   const [confirmando, setConfirmando] = React.useState(false);
+  const { avisar } = useToast();
 
   return (
     <TR className={r.activa ? undefined : "opacity-55"}>
@@ -316,6 +353,7 @@ function FilaRecurrencia({
                 const fd = new FormData();
                 fd.set("id", r.id);
                 void eliminarRecurrenciaAction(fd);
+                avisar(`«${r.concepto}» eliminada`);
               }}
             />
           </>
@@ -361,6 +399,23 @@ function RecurrenciaDialog({
   );
   const [automatica, setAutomatica] = React.useState(recurrencia?.automatica ?? true);
 
+  // Sin fecha explícita, la primera vez es el día del mes que ya usaba el
+  // movimiento de origen, o el de hoy.
+  const primeraFecha = React.useMemo(() => {
+    const hoy = new Date();
+    const dia = inicial?.diaMes ?? hoy.getDate();
+    const f = new Date(hoy.getFullYear(), hoy.getMonth(), dia);
+    return f < hoy ? new Date(hoy.getFullYear(), hoy.getMonth() + 1, dia) : f;
+  }, [inicial?.diaMes]);
+
+  const [proxima, setProxima] = React.useState(
+    toDateInputValue(recurrencia?.proximaFecha ?? primeraFecha),
+  );
+  // Igual que la fecha: un gasto recurrente exige casa y el campo vive plegado.
+  const [casaId, setCasaId] = React.useState(
+    recurrencia?.casa?.id ?? inicial?.casaId ?? (casas[0]?.id ?? ""),
+  );
+
   const esGasto = tipo === "GASTO";
   const categorias = esGasto ? categoriasGasto : categoriasIngreso;
 
@@ -373,7 +428,7 @@ function RecurrenciaDialog({
 
   return (
     <Dialog open={abierto} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
             {recurrencia ? "Editar recurrencia" : "Nueva recurrencia"}
@@ -390,6 +445,10 @@ function RecurrenciaDialog({
           {recurrencia && <input type="hidden" name="id" value={recurrencia.id} />}
           <input type="hidden" name="tipo" value={tipo} />
           <input type="hidden" name="frecuencia" value={frecuencia} />
+          <input type="hidden" name="intervalo" value="1" />
+          {/* Obligatoria y plegada: «Más opciones» no se renderiza cerrado. */}
+          <input type="hidden" name="proximaFecha" value={proxima} />
+          <input type="hidden" name="casaId" value={casaId} />
           <input type="hidden" name="automatica" value={automatica ? "on" : ""} />
 
           <DialogBody className="space-y-4">
@@ -440,65 +499,32 @@ function RecurrenciaDialog({
               />
             </div>
 
-            {(casas.length > 1 || (esGasto && casas.length === 1)) && (
-              <Field label="Casa" opcional={!esGasto} error={estado?.errors?.casaId}>
-                <Select
-                  name="casaId"
-                  defaultValue={recurrencia?.casa?.id ?? inicial?.casaId ?? (casas[0]?.id ?? "")}
-                >
-                  {!esGasto && <option value="">Sin casa</option>}
-                  {casas.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            )}
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Field label="Frecuencia">
-                <Select
-                  value={frecuencia}
-                  onChange={(e) =>
-                    setFrecuencia(e.target.value as RecurrenciaDTO["frecuencia"])
-                  }
-                >
-                  {FRECUENCIAS.map(([v, l]) => (
-                    <option key={v} value={v}>
-                      {l}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field
-                label="Día del mes"
-                opcional
-                error={estado?.errors?.diaMes}
-                ayuda="Si el mes es corto, se cobra el último día."
+            <Field label="Cada">
+              <Select
+                value={frecuencia}
+                onChange={(e) =>
+                  setFrecuencia(e.target.value as RecurrenciaDTO["frecuencia"])
+                }
               >
-                <Input
-                  type="number"
-                  name="diaMes"
-                  min={1}
-                  max={31}
-                  defaultValue={recurrencia?.diaMes ?? inicial?.diaMes ?? ""}
-                  disabled={frecuencia === "SEMANAL"}
-                />
-              </Field>
-              <Field label="Próxima" error={estado?.errors?.proximaFecha}>
+                {FRECUENCIAS.map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            <MasOpciones>
+              {/* La primera fecha se calcula sola a partir de hoy y del día
+                  elegido; solo aparece aquí para poder corregirla. */}
+              <Field label="Primera vez" error={estado?.errors?.proximaFecha}>
                 <Input
                   type="date"
-                  name="proximaFecha"
-                  defaultValue={toDateInputValue(
-                    recurrencia?.proximaFecha ?? new Date(),
-                  )}
+                  value={proxima}
+                  onChange={(e) => setProxima(e.target.value)}
                   required
                 />
               </Field>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Hasta" opcional error={estado?.errors?.fin}>
                 <Input
                   type="date"
@@ -508,41 +534,43 @@ function RecurrenciaDialog({
                   }
                 />
               </Field>
-              {esGasto && (
-                <Field label={"Emisor"} opcional>
-                  <Input
-                    name="contraparte"
-                    defaultValue={recurrencia?.contraparte ?? inicial?.contraparte ?? ""}
-                    placeholder="Iberdrola"
-                  />
-                </Field>
-              )}
-              {!esGasto && (
-                <Field label="Fuente" opcional>
-                  <Input
-                    name="contraparte"
-                    defaultValue={recurrencia?.contraparte ?? inicial?.contraparte ?? ""}
-                    placeholder="Empresa"
-                  />
-                </Field>
-              )}
-            </div>
 
-            <div className="flex items-start gap-3 rounded-md border border-border p-3">
-              <Switch
-                checked={automatica}
-                onCheckedChange={setAutomatica}
-                aria-label="Crear el movimiento automáticamente"
-              />
-              <span className="text-xs">
-                <span className="font-medium text-foreground">
-                  Crear el movimiento automáticamente
+              {casas.length > 1 && (
+                <Field label="Casa" opcional={!esGasto} error={estado?.errors?.casaId}>
+                  <Select
+                    value={casaId}
+                    onChange={(e) => setCasaId(e.target.value)}
+                  >
+                    {!esGasto && <option value="">Sin casa</option>}
+                    {casas.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nombre}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              )}
+
+              <Field label={esGasto ? "Emisor" : "Fuente"} opcional>
+                <Input
+                  name="contraparte"
+                  defaultValue={recurrencia?.contraparte ?? inicial?.contraparte ?? ""}
+                  placeholder={esGasto ? "Iberdrola" : "Empresa"}
+                />
+              </Field>
+
+              <div className="flex items-start gap-3 sm:col-span-2">
+                <Switch
+                  checked={automatica}
+                  onCheckedChange={setAutomatica}
+                  aria-label="Apuntarlo automáticamente"
+                />
+                <span className="text-xs text-muted-foreground">
+                  Apuntarlo automáticamente. Si lo desactivas, cada vez te lo
+                  proponemos y decides tú.
                 </span>
-                <span className="mt-0.5 block text-muted-foreground">
-                  Si lo desactivas, cada vez te lo propondremos y decidirás tú.
-                </span>
-              </span>
-            </div>
+              </div>
+            </MasOpciones>
 
             {estado?.message && <FormError>{estado.message}</FormError>}
           </DialogBody>

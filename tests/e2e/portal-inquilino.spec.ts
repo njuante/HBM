@@ -23,20 +23,26 @@ test("el inquilino solo ve su panel y las facturas que le comparten", async ({
   await pageOwner.getByRole("button", { name: /crear cuenta/i }).click();
   await expect(pageOwner).toHaveURL(/\/dashboard/);
 
-  // El módulo nace apagado: no hay pestaña de alquileres.
-  await expect(pageOwner.getByRole("link", { name: "Alquileres" })).toHaveCount(0);
+  // El módulo nace apagado: la ruta no existe para esta familia.
+  await pageOwner.goto("/alquileres");
+  await expect(pageOwner).toHaveURL(/\/familia/);
 
-  await pageOwner.goto("/familia");
   await pageOwner
     .getByRole("switch", { name: /activar el módulo de alquileres/i })
     .click();
-  await expect(pageOwner.getByRole("link", { name: "Alquileres" })).toBeVisible();
+
+  // Encendido, aparece en el menú de ajustes.
+  await pageOwner.getByRole("button", { name: /^ajustes$/i }).click();
+  await expect(
+    pageOwner.getByRole("menuitem", { name: "Alquileres" }),
+  ).toBeVisible();
+  await pageOwner.keyboard.press("Escape");
 
   // Dos casas: la que se alquila y otra que no.
   await pageOwner.goto("/casas");
   for (const nombre of ["Piso alquilado", "Nuestra casa"]) {
     await pageOwner.getByRole("button", { name: /añadir casa/i }).first().click();
-    await pageOwner.getByLabel("Nombre").fill(nombre);
+    await pageOwner.getByLabel("Nombre", { exact: true }).fill(nombre);
     await pageOwner.getByRole("button", { name: /crear casa/i }).click();
     await expect(pageOwner.getByText(nombre)).toBeVisible();
   }
@@ -45,10 +51,18 @@ test("el inquilino solo ve su panel y las facturas que le comparten", async ({
   await pageOwner.goto("/alquileres");
   await pageOwner.getByRole("button", { name: /nuevo contrato/i }).first().click();
   await pageOwner.getByLabel("Casa").selectOption({ label: "Piso alquilado" });
-  await pageOwner.getByLabel("Inquilino").fill("Inquilino Tester");
+  await pageOwner.getByLabel("Inquilino", { exact: true }).fill("Inquilino Tester");
   await pageOwner.getByLabel("Su email").fill(inquilino);
   await pageOwner.getByLabel("Renta mensual").fill("750");
   await pageOwner.getByRole("button", { name: /crear contrato/i }).click();
+
+  // El mismo diálogo entrega el enlace del inquilino: contrato y acceso son un
+  // solo paso.
+  const enlace = await pageOwner
+    .getByLabel("Enlace de acceso al portal")
+    .inputValue();
+  expect(enlace).toContain("/invitacion/");
+  await pageOwner.getByRole("button", { name: /^hecho$/i }).click();
   await expect(pageOwner.getByText("Inquilino Tester")).toBeVisible();
 
   // Dos facturas: una se comparte, la otra no.
@@ -64,24 +78,22 @@ test("el inquilino solo ve su panel y las facturas que le comparten", async ({
       buffer: Buffer.from(`%PDF-1.4\n${emisor}\n%%EOF`),
     });
     await pageOwner.getByLabel("Emisor").fill(emisor);
+    // La casa de una factura vive en «Más opciones».
+    await pageOwner.getByRole("button", { name: /más opciones/i }).click();
     await pageOwner.getByLabel("Casa").selectOption({ label: casa });
-    await pageOwner.getByRole("button", { name: /guardar factura/i }).click();
-    await expect(pageOwner.getByText(emisor)).toBeVisible();
+    await pageOwner
+      .getByRole("dialog")
+      .getByRole("button", { name: /subir factura/i })
+      .click();
+    await expect(
+      pageOwner.getByRole("cell", { name: new RegExp(emisor, "i") }).first(),
+    ).toBeVisible();
   }
 
   await pageOwner.getByRole("button", { name: /acciones de endesa/i }).click();
   await pageOwner
     .getByRole("menuitem", { name: /compartir con el inquilino/i })
     .click();
-
-  // Enlace de acceso al portal.
-  await pageOwner.goto("/alquileres");
-  await pageOwner.getByRole("button", { name: /acciones de piso alquilado/i }).click();
-  await pageOwner.getByRole("menuitem", { name: /dar acceso al portal/i }).click();
-  await pageOwner.getByRole("button", { name: /generar enlace/i }).click();
-  const enlace = await pageOwner
-    .getByLabel("Enlace de acceso al portal")
-    .inputValue();
 
   // ── Inquilino ──────────────────────────────────────────────────────────
   const ctxInq = await browser.newContext();
@@ -94,7 +106,7 @@ test("el inquilino solo ve su panel y las facturas que le comparten", async ({
 
   // Aunque el alta redirige al panel de la app, el DAL lo manda a su portal.
   await expect(pageInq).toHaveURL(/\/portal/);
-  await expect(pageInq.getByText("Piso alquilado")).toBeVisible();
+  await expect(pageInq.getByRole("heading", { name: "Piso alquilado" })).toBeVisible();
   await expect(pageInq.getByText(/750,00/)).toBeVisible();
 
   // Ve la compartida y no la otra.

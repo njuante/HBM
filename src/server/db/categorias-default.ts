@@ -29,6 +29,7 @@ const GASTOS: DefCat[] = [
   { nombre: "Alimentación", color: "#4a6b3d", icono: "shopping-cart" },
   { nombre: "Transporte", color: "#a85b22", icono: "car" },
   { nombre: "Salud", color: "#8e3b5c", icono: "heart-pulse" },
+  { nombre: "Suscripciones", color: "#6366f1", icono: "repeat" },
   { nombre: "Ocio", color: "#2f7a5e", icono: "party-popper" },
   { nombre: "Educación", color: "#7a4a86", icono: "graduation-cap" },
   { nombre: "Otros gastos", color: "#78736b", icono: "ellipsis" },

@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Field, FormError } from "@/components/ui/field";
+import { MasOpciones } from "@/components/ui/mas-opciones";
 import {
   DialogBody,
   DialogFooter,
@@ -18,6 +19,7 @@ export type Opt = { id: string; nombre: string };
 
 export type FacturaDefaults = {
   id?: string;
+  importe?: number | null;
   emisor?: string | null;
   numeroFactura?: string | null;
   fechaEmision?: string | null;
@@ -35,7 +37,7 @@ export function FacturaForm({
   action,
   defaults,
   conArchivo = true,
-  submitLabel = "Guardar factura",
+  submitLabel = "Subir factura",
   onCancel,
   onOk,
 }: {
@@ -48,6 +50,9 @@ export function FacturaForm({
   onCancel?: () => void;
   onOk?: () => void;
 }) {
+  // Con una sola casa no hay nada que elegir, igual que en el alta de un
+  // movimiento: se preselecciona y el campo se va a «Más opciones».
+  const casaPorDefecto = defaults?.casaId ?? (casas.length === 1 ? casas[0].id : "");
   const [estado, setEstado] = React.useState<FormState>(undefined);
 
   return (
@@ -71,28 +76,34 @@ export function FacturaForm({
               placeholder="Iberdrola"
             />
           </Field>
-          <Field label="Nº de factura" opcional>
+          <Field label="Importe" opcional>
             <Input
-              name="numeroFactura"
-              defaultValue={defaults?.numeroFactura ?? ""}
+              name="importe"
+              inputMode="decimal"
+              adornoDer="€"
+              defaultValue={defaults?.importe ?? ""}
             />
           </Field>
-
-          <Field label="Fecha de emisión" opcional>
-            <Input
-              name="fechaEmision"
-              type="date"
-              defaultValue={defaults?.fechaEmision ?? ""}
-            />
-          </Field>
-          <Field label="Vencimiento" opcional>
+          <Field label="Vencimiento" opcional className="sm:col-span-2">
             <Input
               name="fechaVencimiento"
               type="date"
               defaultValue={defaults?.fechaVencimiento ?? ""}
             />
           </Field>
+        </div>
 
+        <MasOpciones>
+          <Field label="Casa" opcional>
+            <Select name="casaId" defaultValue={casaPorDefecto}>
+              <option value="">Sin casa</option>
+              {casas.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
+              ))}
+            </Select>
+          </Field>
           <Field label="Estado">
             <Select
               name="estadoPago"
@@ -102,31 +113,19 @@ export function FacturaForm({
               <option value="PAGADA">Pagada</option>
             </Select>
           </Field>
-          <Field label="Casa" opcional>
-            <Select name="casaId" defaultValue={defaults?.casaId ?? ""}>
-              <option value="">Sin casa</option>
-              {casas.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre}
-                </option>
-              ))}
-            </Select>
-          </Field>
 
-          <Field
-            label="Gasto asociado"
-            opcional
-            className="sm:col-span-2"
-            ayuda="Enlaza la factura con el gasto que ya registraste."
-          >
-            <Select name="gastoId" defaultValue={defaults?.gastoId ?? ""}>
-              <option value="">Sin gasto</option>
-              {gastos.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.nombre}
-                </option>
-              ))}
-            </Select>
+          <Field label="Nº de factura" opcional>
+            <Input
+              name="numeroFactura"
+              defaultValue={defaults?.numeroFactura ?? ""}
+            />
+          </Field>
+          <Field label="Fecha de emisión" opcional>
+            <Input
+              name="fechaEmision"
+              type="date"
+              defaultValue={defaults?.fechaEmision ?? ""}
+            />
           </Field>
 
           <Field label="Consumo" opcional ayuda="kWh, m³…">
@@ -141,11 +140,22 @@ export function FacturaForm({
           <Field label="Periodo" opcional>
             <Input
               name="periodo"
+              type="month"
               defaultValue={defaults?.periodo ?? ""}
-              placeholder="2026-06"
             />
           </Field>
-        </div>
+
+          <Field label="Gasto asociado" opcional className="sm:col-span-2">
+            <Select name="gastoId" defaultValue={defaults?.gastoId ?? ""}>
+              <option value="">Sin gasto</option>
+              {gastos.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.nombre}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </MasOpciones>
 
         {estado?.message && <FormError>{estado.message}</FormError>}
       </DialogBody>

@@ -7,10 +7,10 @@ import { IconoCategoria } from "@/components/ui/icono-categoria";
 import { armonizarColor } from "@/components/charts/chart-theme";
 import { useTheme } from "@/components/theme-provider";
 import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
+import { Segmented } from "@/components/ui/segmented";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field, FormError } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -66,58 +66,53 @@ export function CategoriasClient({
   const [tipo, setTipo] = React.useState<Tipo>("GASTO");
   const [borrador, setBorrador] = React.useState<Borrador | null>(null);
 
+  const lista = tipo === "GASTO" ? gastos : ingresos;
+
   return (
-    <>
-      <Tabs value={tipo} onValueChange={(v) => setTipo(v as Tipo)}>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <TabsList>
-            <TabsTrigger value="GASTO">Gastos</TabsTrigger>
-            <TabsTrigger value="INGRESO">Ingresos</TabsTrigger>
-          </TabsList>
-          {puedeGestionar && (
-            <Button
-              size="sm"
-              className="mb-1.5"
-              onClick={() => setBorrador({ modo: "crear", tipo })}
-            >
+    <div>
+      <PageHeader
+        title="Categorías"
+        description="Con qué se etiqueta cada movimiento."
+        action={
+          puedeGestionar && (
+            <Button onClick={() => setBorrador({ modo: "crear", tipo })}>
               <Plus />
               Nueva categoría
             </Button>
-          )}
-        </div>
+          )
+        }
+      />
 
-        <TabsContent value="GASTO">
-          <Arbol
-            lista={gastos}
-            puedeGestionar={puedeGestionar}
-            onCrear={setBorrador}
-            onEditar={setBorrador}
-            tipo="GASTO"
-          />
-        </TabsContent>
-        <TabsContent value="INGRESO">
-          <Arbol
-            lista={ingresos}
-            puedeGestionar={puedeGestionar}
-            onCrear={setBorrador}
-            onEditar={setBorrador}
-            tipo="INGRESO"
-          />
-        </TabsContent>
-      </Tabs>
+      <div className="mb-4">
+        {/* Mismo conmutador de dos valores que en el resto de la app; antes
+            aquí eran `Tabs` de Radix y en recurrentes un `Segmented`. */}
+        <Segmented
+          ariaLabel="Tipo de categoría"
+          value={tipo}
+          onChange={setTipo}
+          options={[
+            { value: "GASTO", label: "Gastos" },
+            { value: "INGRESO", label: "Ingresos" },
+          ]}
+        />
+      </div>
+
+      <Arbol
+        lista={lista}
+        puedeGestionar={puedeGestionar}
+        onCrear={setBorrador}
+        onEditar={setBorrador}
+        tipo={tipo}
+      />
 
       <CategoriaDialog
         key={
           borrador?.modo === "editar" ? borrador.item.id : `crear-${borrador?.tipo}`
         }
         borrador={borrador}
-        raices={(tipo === "GASTO" ? gastos : ingresos).map((c) => ({
-          id: c.id,
-          nombre: c.nombre,
-        }))}
         onOpenChange={(v) => !v && setBorrador(null)}
       />
-    </>
+    </div>
   );
 }
 
@@ -291,11 +286,9 @@ function Linea({
 
 function CategoriaDialog({
   borrador,
-  raices,
   onOpenChange,
 }: {
   borrador: Borrador | null;
-  raices: { id: string; nombre: string }[];
   onOpenChange: (v: boolean) => void;
 }) {
   const editando = borrador?.modo === "editar";
@@ -366,18 +359,9 @@ function CategoriaDialog({
               </div>
             </div>
 
-            {borrador?.modo === "crear" && !borrador.parentId && raices.length > 0 && (
-              <Field label="Subcategoría de" opcional>
-                <Select name="parentId" defaultValue="">
-                  <option value="">Es una categoría principal</option>
-                  {raices.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.nombre}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            )}
+            {/* Sin selector de categoría madre: para crear una subcategoría se
+                usa «Añadir subcategoría» en la fila de su madre, que es donde
+                está el contexto. Había dos caminos para lo mismo. */}
 
             {estado?.message && <FormError>{estado.message}</FormError>}
           </DialogBody>

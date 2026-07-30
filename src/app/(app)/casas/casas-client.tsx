@@ -3,6 +3,8 @@
 import * as React from "react";
 import { House, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
+import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -50,15 +52,19 @@ export function CasasClient({
   const [creando, setCreando] = React.useState(false);
 
   return (
-    <>
-      {puedeGestionar && (
-        <div className="mb-4 flex justify-end">
-          <Button onClick={() => setCreando(true)}>
-            <Plus />
-            Añadir casa
-          </Button>
-        </div>
-      )}
+    <div>
+      <PageHeader
+        title="Casas"
+        description={`${casas.length} ${casas.length === 1 ? "vivienda" : "viviendas"}`}
+        action={
+          puedeGestionar && (
+            <Button onClick={() => setCreando(true)}>
+              <Plus />
+              Añadir casa
+            </Button>
+          )
+        }
+      />
 
       {casas.length === 0 ? (
         <Card>
@@ -81,7 +87,7 @@ export function CasasClient({
           {casas.map((casa) => (
             <Card
               key={casa.id}
-              className="flex flex-col p-4 transition-colors hover:border-border-strong"
+              className="group flex flex-col p-4 transition-colors hover:border-border-strong"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted/60">
@@ -124,7 +130,7 @@ export function CasasClient({
         onOpenChange={(v) => !v && setEditando(null)}
         action={actualizarCasaAction}
       />
-    </>
+    </div>
   );
 }
 
@@ -136,6 +142,7 @@ function AccionesCasa({
   onEditar: () => void;
 }) {
   const [confirmando, setConfirmando] = React.useState(false);
+  const { avisar } = useToast();
 
   return (
     <>
@@ -181,6 +188,7 @@ function AccionesCasa({
           const fd = new FormData();
           fd.set("id", casa.id);
           void eliminarCasaAction(fd);
+          avisar(`«${casa.nombre}» eliminada`);
         }}
       />
     </>

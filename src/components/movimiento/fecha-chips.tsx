@@ -38,8 +38,26 @@ export function FechaChips({
   const valores = { hoy: hoy(), ayer: ayer() };
   const otra = value !== valores.hoy && value !== valores.ayer;
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (["ArrowRight", "ArrowLeft"].includes(e.key)) {
+      e.preventDefault();
+      if (e.key === "ArrowRight") {
+        if (value === valores.hoy) onChange(valores.ayer);
+        else if (value === valores.ayer) setAbierto(true);
+      } else if (e.key === "ArrowLeft") {
+        if (value === valores.ayer) onChange(valores.hoy);
+      }
+    }
+  };
+
   return (
-    <div role="radiogroup" aria-label="Fecha" className="flex items-center gap-1.5">
+    <div
+      role="radiogroup"
+      aria-label="Fecha"
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+      className="flex items-center gap-1.5 focus:outline-none"
+    >
       <input type="hidden" name={name} value={value} />
 
       {(["hoy", "ayer"] as const).map((k) => (

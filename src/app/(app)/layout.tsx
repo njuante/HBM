@@ -1,6 +1,7 @@
 import { requireFamilia } from "@/server/auth/dal";
 import { AppShell } from "@/components/app-shell";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ToastProvider } from "@/components/ui/toast";
 
 export default async function AppLayout({
   children,
@@ -9,6 +10,7 @@ export default async function AppLayout({
 }) {
   const ctx = await requireFamilia();
   return (
+    <ToastProvider>
     <TooltipProvider delayDuration={350} skipDelayDuration={200}>
       <AppShell
         familiaNombre={ctx.familia.nombre}
@@ -24,5 +26,6 @@ export default async function AppLayout({
         {children}
       </AppShell>
     </TooltipProvider>
+    </ToastProvider>
   );
 }

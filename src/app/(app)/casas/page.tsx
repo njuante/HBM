@@ -1,6 +1,5 @@
 import { requireFamilia, puedeGestionar } from "@/server/auth/dal";
 import { listCasas } from "@/server/db/casas";
-import { PageHeader } from "@/components/page-header";
 import { CasasClient, type CasaDTO } from "./casas-client";
 
 export default async function CasasPage() {
@@ -16,16 +15,10 @@ export default async function CasasPage() {
   }));
 
   return (
-    <div>
-      <PageHeader
-        title="Casas"
-        description="Gestiona las viviendas de tu familia."
-      />
-      <CasasClient
+    <CasasClient
         casas={dto}
         puedeGestionar={puedeGestionar(ctx)}
         alquileresActivo={ctx.alquileresActivo}
       />
-    </div>
   );
 }

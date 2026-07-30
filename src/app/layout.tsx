@@ -24,6 +24,11 @@ export const metadata: Metadata = {
   title: "HBM — Gestión de gastos del hogar",
   description:
     "ERP doméstico para familias y casas: gastos, ingresos, facturas y visión gráfica.",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "HBM ERP",
+  },
 };
 
 export const viewport: Viewport = {

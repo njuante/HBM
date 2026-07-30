@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-// Flujo completo de M1: registro, panel, casas, familia, logout y login.
+// Flujo completo: registro, panel, casas, familia, logout y login.
 test("registro → panel → casas → familia → logout → login", async ({ page }) => {
   const email = `e2e_${Date.now()}@test.com`;
   const password = "Password123";
@@ -17,27 +17,27 @@ test("registro → panel → casas → familia → logout → login", async ({ p
   await expect(page).toHaveURL(/\/dashboard/);
   await expect(page.getByRole("heading", { name: /^panel$/i })).toBeVisible();
 
-  // Alta de casa
+  // Alta de casa: el formulario vive en un diálogo, así que primero se abre.
   await page.goto("/casas");
-  await page.getByLabel("Nombre", { exact: true }).fill("Piso Test");
   await page.getByRole("button", { name: /añadir casa/i }).first().click();
+  await page.getByLabel("Nombre", { exact: true }).fill("Piso Test");
+  await page.getByRole("button", { name: /crear casa/i }).click();
   await expect(page.getByText("Piso Test")).toBeVisible();
 
-  // Familia: el usuario aparece como OWNER (badge, no la opción del selector)
+  // Familia: el usuario aparece como propietario.
   await page.goto("/familia");
   await expect(page.getByText(email)).toBeVisible();
-  await expect(
-    page.locator("span.rounded-full", { hasText: "OWNER" }).first(),
-  ).toBeVisible();
+  await expect(page.getByText("Propietario").first()).toBeVisible();
 
-  // Logout
-  await page.getByRole("button", { name: /cerrar sesión/i }).click();
+  // Logout, desde el menú de usuario.
+  await page.getByRole("button", { name: /^cuenta de /i }).click();
+  await page.getByRole("menuitem", { name: /cerrar sesión/i }).click();
   await expect(page).toHaveURL(/\/login/);
 
   // Login de nuevo
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Contraseña").fill(password);
-  await page.getByRole("button", { name: /iniciar sesión/i }).click();
+  await page.getByRole("button", { name: /^entrar$/i }).click();
   await expect(page).toHaveURL(/\/dashboard/);
 });
 

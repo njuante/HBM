@@ -56,8 +56,13 @@ export async function facturasCompartidas(
       pagoDeclarado: Boolean(f.pagoDeclaradoAt),
       compartidaAt: f.compartidaAt!.toISOString(),
       archivoTipo: f.archivoTipo,
-      // El importe vive en el gasto asociado; sin gasto no hay cifra que dar.
-      importe: f.gasto ? decimalToNumber(f.gasto.importe) : null,
+      // El de la propia factura manda; el del gasto es el respaldo de las
+      // facturas antiguas, anteriores a que la factura tuviera importe.
+      importe: f.importe
+        ? decimalToNumber(f.importe)
+        : f.gasto
+          ? decimalToNumber(f.gasto.importe)
+          : null,
       consumo: extra.consumo ?? null,
       periodo: extra.periodo ?? null,
     };

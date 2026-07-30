@@ -10,7 +10,8 @@ import { getGasto } from "@/server/db/gastos";
 import { getIngreso } from "@/server/db/ingresos";
 import { decimalToNumber } from "@/lib/money";
 import { TipoCategoria } from "@/generated/prisma/enums";
-import { PageHeader } from "@/components/page-header";
+import { obtenerPagosHormiga } from "@/server/db/pagos-hormiga";
+import { mesActual } from "@/lib/periodo";
 import { RecurrentesClient, type BorradorRecurrencia } from "./recurrentes-client";
 
 export default async function RecurrentesPage(props: {
@@ -22,12 +23,13 @@ export default async function RecurrentesPage(props: {
   // Al abrir la sección se pone al día lo que ya tocaba.
   await asegurarRecurrencias(ctx.familiaId);
 
-  const [items, propuestas, casas, catGasto, catIngreso] = await Promise.all([
+  const [items, propuestas, casas, catGasto, catIngreso, pagosHormiga] = await Promise.all([
     listRecurrencias(ctx.familiaId),
     listPropuestas(ctx.familiaId),
     listCasas(ctx.familiaId),
     listCategorias(ctx.familiaId, TipoCategoria.GASTO),
     listCategorias(ctx.familiaId, TipoCategoria.INGRESO),
+    obtenerPagosHormiga(ctx.familiaId, mesActual()),
   ]);
 
   // «Convertir en recurrente» llega desde la lista de movimientos con el id en
@@ -52,21 +54,17 @@ export default async function RecurrentesPage(props: {
   });
 
   return (
-    <div>
-      <PageHeader
-        title="Recurrentes"
-        description="Lo que se repite solo: alquiler, nóminas, suministros."
-      />
-      <RecurrentesClient
-        items={items}
-        propuestas={propuestas}
-        casas={casas.map((c) => ({ id: c.id, nombre: c.nombre }))}
-        categoriasGasto={catGasto.map(aChip)}
-        categoriasIngreso={catIngreso.map(aChip)}
-        puedeGestionar={puedeGestionar(ctx)}
-        borrador={borrador}
-      />
-    </div>
+    <RecurrentesClient
+      items={items}
+      propuestas={propuestas}
+      casas={casas.map((c) => ({ id: c.id, nombre: c.nombre }))}
+      categoriasGasto={catGasto.map(aChip)}
+      categoriasIngreso={catIngreso.map(aChip)}
+      puedeGestionar={puedeGestionar(ctx)}
+      borrador={borrador}
+      abrirNuevo={sp.nuevo === "1"}
+      pagosHormiga={pagosHormiga}
+    />
   );
 }
 

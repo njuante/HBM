@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import { Copy, MoreHorizontal, Paperclip, Pencil, Repeat, Trash2 } from "lucide-react";
-import { formatEUR } from "@/lib/money";
-import { cn } from "@/lib/utils";
+import { Money } from "@/components/ui/money";
 import { MarcaCategoria } from "@/components/ui/icono-categoria";
 import { armonizarColor } from "@/components/charts/chart-theme";
 import { useTheme } from "@/components/theme-provider";
@@ -21,6 +20,7 @@ import {
 
 export type MovimientoFila = {
   id: string;
+  tipo: "GASTO" | "INGRESO";
   importe: number;
   fecha: string;
   concepto: string;
@@ -45,7 +45,6 @@ const DIA_FMT = new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "short
  */
 export function MovimientosTabla({
   items,
-  tono,
   mostrarCasa,
   onEditar,
   onDuplicar,
@@ -53,7 +52,6 @@ export function MovimientosTabla({
   onConvertir,
 }: {
   items: MovimientoFila[];
-  tono: "gasto" | "ingreso";
   mostrarCasa: boolean;
   onEditar: (id: string) => void;
   onDuplicar: (id: string) => void;
@@ -74,7 +72,6 @@ export function MovimientosTabla({
     return [...mapa.values()];
   }, [items]);
 
-  const colorImporte = tono === "gasto" ? "text-danger" : "text-success";
   const columnas = mostrarCasa ? 6 : 5;
 
   return (
@@ -94,7 +91,11 @@ export function MovimientosTabla({
         </THead>
 
         {grupos.map((g) => {
-          const totalMes = g.filas.reduce((s, f) => s + f.importe, 0);
+          // Neto: en una lista mixta la suma bruta no significa nada.
+          const netoMes = g.filas.reduce(
+            (s, f) => s + (f.tipo === "GASTO" ? -f.importe : f.importe),
+            0,
+          );
           return (
             <TBody key={g.etiqueta}>
               <tr className="border-b border-border bg-muted/40">
@@ -106,9 +107,9 @@ export function MovimientosTabla({
                 </td>
                 <td
                   colSpan={2}
-                  className="px-3 py-1.5 text-right text-2xs tabular-nums text-muted-foreground"
+                  className="px-3 py-1.5 text-right text-2xs text-muted-foreground"
                 >
-                  {formatEUR(totalMes)}
+                  <Money value={netoMes} signo />
                 </td>
               </tr>
 
@@ -165,8 +166,13 @@ export function MovimientosTabla({
                       </TD>
                     )}
 
-                    <TD numerico className={cn("font-medium", colorImporte)}>
-                      {formatEUR(m.importe)}
+                    <TD numerico>
+                      <Money
+                        value={m.tipo === "GASTO" ? -m.importe : m.importe}
+                        tono="auto"
+                        signo
+                        className="font-medium"
+                      />
                     </TD>
 
                     <TD className="pr-2">
@@ -178,7 +184,7 @@ export function MovimientosTabla({
                           onConvertir ? () => onConvertir(m.id) : undefined
                         }
                         concepto={m.concepto}
-                        tono={tono}
+                        tipo={m.tipo}
                         puedeEditar={m.puedeEditar !== false}
                       />
                     </TD>
@@ -199,7 +205,7 @@ function AccionesFila({
   onEliminar,
   onConvertir,
   concepto,
-  tono,
+  tipo,
   puedeEditar,
 }: {
   onEditar: () => void;
@@ -207,7 +213,7 @@ function AccionesFila({
   onEliminar: () => void;
   onConvertir?: () => void;
   concepto: string;
-  tono: "gasto" | "ingreso";
+  tipo: "GASTO" | "INGRESO";
   puedeEditar: boolean;
 }) {
   const [confirmando, setConfirmando] = React.useState(false);
@@ -268,7 +274,7 @@ function AccionesFila({
         open={confirmando}
         onOpenChange={setConfirmando}
         titulo={`¿Eliminar «${concepto}»?`}
-        descripcion={`Se borrará este ${tono} de forma permanente.`}
+        descripcion={`Se borrará este ${tipo === "GASTO" ? "gasto" : "ingreso"} de forma permanente.`}
         onConfirmar={onEliminar}
       />
     </>

@@ -13,7 +13,7 @@ test("crear una recurrencia manual y confirmar su propuesta", async ({ page }) =
 
   await page.goto("/casas");
   await page.getByRole("button", { name: /añadir casa/i }).first().click();
-  await page.getByLabel("Nombre").fill("Casa Rec");
+  await page.getByLabel("Nombre", { exact: true }).fill("Casa Rec");
   await page.getByRole("button", { name: /crear casa/i }).click();
   await expect(page.getByText("Casa Rec")).toBeVisible();
 
@@ -24,23 +24,27 @@ test("crear una recurrencia manual y confirmar su propuesta", async ({ page }) =
   await page.getByLabel("Concepto").fill("Gimnasio");
   await page.getByLabel("Importe").fill("39,90");
   await page.getByRole("radio", { name: "Ocio" }).click();
-  await page.getByLabel("Próxima").fill("2026-01-05");
+  // La primera fecha y el modo manual viven en «Más opciones».
+  await page.getByRole("button", { name: /más opciones/i }).click();
+  await page.getByLabel("Primera vez").fill("2026-01-05");
   await page
-    .getByRole("switch", { name: /crear el movimiento automáticamente/i })
+    .getByRole("switch", { name: /apuntarlo autom/i })
     .click();
   await page.getByRole("button", { name: /crear recurrencia/i }).click();
 
   await expect(page.getByText("Gimnasio")).toBeVisible();
   await expect(page.getByText("Confirmar", { exact: true })).toBeVisible();
 
-  // La materialización perezosa corre al abrir el panel.
+  // La materialización perezosa corre al abrir el panel, que lo anuncia; la
+  // bandeja donde se confirman vive en /recurrentes.
   await page.goto("/dashboard");
   await expect(page.getByText(/pendientes? de confirmar/i)).toBeVisible();
 
+  await page.goto("/recurrentes");
   await page.getByRole("button", { name: /confirmar gimnasio/i }).first().click();
 
   // Confirmada, el gasto ya existe y la bandeja se vacía.
-  await page.goto("/gastos");
+  await page.goto("/movimientos");
   await expect(page.getByText("Gimnasio")).toBeVisible();
   await expect(page.getByText(/39,90/).first()).toBeVisible();
 });
@@ -58,16 +62,16 @@ test("un gasto se convierte en recurrencia desde su fila", async ({ page }) => {
 
   await page.goto("/casas");
   await page.getByRole("button", { name: /añadir casa/i }).first().click();
-  await page.getByLabel("Nombre").fill("Casa Conv");
+  await page.getByLabel("Nombre", { exact: true }).fill("Casa Conv");
   await page.getByRole("button", { name: /crear casa/i }).click();
   await expect(page.getByText("Casa Conv")).toBeVisible();
 
-  await page.goto("/gastos");
-  await page.getByRole("button", { name: /añadir gasto/i }).first().click();
+  await page.goto("/movimientos");
+  await page.getByRole("button", { name: /^añadir$/i }).first().click();
   await page.getByLabel("Concepto").fill("Netflix");
   await page.getByLabel(/importe/i).fill("13,99");
   await page.getByRole("radio", { name: "Ocio" }).click();
-  await page.getByRole("button", { name: /guardar gasto/i }).click();
+  await page.getByRole("button", { name: /añadir gasto/i }).click();
   await expect(page.getByText("Netflix")).toBeVisible();
 
   await page.getByRole("button", { name: /acciones de netflix/i }).click();

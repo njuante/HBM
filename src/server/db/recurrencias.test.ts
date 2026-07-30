@@ -6,6 +6,7 @@ import {
   actualizarRecurrencia,
   eliminarRecurrencia,
   materializarRecurrencias,
+  asegurarRecurrencias,
   listRecurrencias,
   listPropuestas,
   confirmarPropuesta,
@@ -243,6 +244,29 @@ describe("validación y aislamiento", () => {
     const res = await materializarRecurrencias(otraFam, new Date(2026, 6, 1));
     expect(res.creados).toBe(0);
     expect((await listGastos(fam, { texto: "Aislada" })).items).toHaveLength(0);
+
+    await eliminarRecurrencia(fam, r.id);
+  });
+});
+
+describe("freno de la materialización perezosa", () => {
+  it("crear una recurrencia levanta el freno de los 10 minutos", async () => {
+    // Una primera visita marca la familia como puesta al día aunque no hubiera
+    // nada que hacer: es la situación real al aterrizar en el panel.
+    await asegurarRecurrencias(fam);
+
+    const r = await crearRecurrencia(
+      fam,
+      userId,
+      base({ concepto: "Atrasada", proximaFecha: new Date(2026, 0, 1) }),
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+
+    // Sin invalidar el freno, esta llamada no haría nada y el usuario no vería
+    // su recibo atrasado hasta diez minutos después.
+    await asegurarRecurrencias(fam);
+    expect((await listGastos(fam, { texto: "Atrasada" })).items.length).toBeGreaterThan(0);
 
     await eliminarRecurrencia(fam, r.id);
   });

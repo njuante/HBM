@@ -3,6 +3,7 @@ import { requireInquilino } from "@/server/auth/dal";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ToastProvider } from "@/components/ui/toast";
 
 /**
  * Marco del portal del inquilino.
@@ -18,6 +19,7 @@ export default async function PortalLayout({
   const ctx = await requireInquilino();
 
   return (
+    <ToastProvider>
     <TooltipProvider delayDuration={200}>
       <div className="flex min-h-screen flex-1 flex-col">
         <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/65">
@@ -50,5 +52,6 @@ export default async function PortalLayout({
         </main>
       </div>
     </TooltipProvider>
+    </ToastProvider>
   );
 }

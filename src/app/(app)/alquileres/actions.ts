@@ -82,7 +82,28 @@ export async function crearContratoAction(
   }
 
   revalidar();
+
+  // Dar de alta el contrato y dar acceso al inquilino eran dos diálogos y dos
+  // momentos distintos; el segundo no pedía ningún dato. Ahora el enlace sale
+  // del mismo paso, que es cuando de verdad hace falta.
+  if (formData.get("invitar") === "on") {
+    const inv = await crearInvitacion(ctx.familiaId, ctx.userId, ctx.rol, {
+      email: parsed.data.inquilinoEmail,
+      rol: Rol.INQUILINO,
+      casaId: parsed.data.casaId,
+    });
+    if (inv.ok) return { ok: true, valor: await enlaceDe(inv.token) };
+  }
+
   return { ok: true };
+}
+
+/** El enlace se arma con el host de la petición: la app no conoce su URL. */
+async function enlaceDe(token: string): Promise<string> {
+  const h = await headers();
+  const proto = h.get("x-forwarded-proto") ?? "http";
+  const host = h.get("host") ?? "localhost:3000";
+  return `${proto}://${host}/invitacion/${token}`;
 }
 
 export async function actualizarContratoAction(
@@ -137,12 +158,8 @@ export async function invitarInquilinoAction(
   });
   if (!res.ok) return { message: res.error };
 
-  const h = await headers();
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  const host = h.get("host") ?? "localhost:3000";
-
   revalidar();
-  return { ok: true, valor: `${proto}://${host}/invitacion/${res.token}` };
+  return { ok: true, valor: await enlaceDe(res.token) };
 }
 
 export async function revocarAccesoAction(formData: FormData): Promise<void> {

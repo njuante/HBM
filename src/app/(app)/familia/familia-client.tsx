@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Check, Copy, LogOut, MoreHorizontal, Trash2, UserPlus } from "lucide-react";
+import { Check, LogOut, MoreHorizontal, Trash2, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/page-header";
+import { EnlaceCopiable } from "@/components/ui/enlace-copiable";
 import { formatFecha } from "@/lib/format";
 import {
   Card,
@@ -89,22 +91,26 @@ export function FamiliaClient({
   const [invitando, setInvitando] = React.useState(false);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
-      <Card className="lg:col-span-2">
-        <CardHeader>
-          <div>
-            <CardTitle>Miembros</CardTitle>
-            <CardDescription>
-              {miembros.length} {miembros.length === 1 ? "persona" : "personas"} con
-              acceso a las cuentas de la familia
-            </CardDescription>
-          </div>
-          {puedeGestionar && (
-            <Button size="sm" variant="secondary" onClick={() => setInvitando(true)}>
+    <div>
+      <PageHeader
+        title="Familia"
+        description={`${miembros.length} ${
+          miembros.length === 1 ? "persona" : "personas"
+        } con acceso`}
+        action={
+          puedeGestionar && (
+            <Button onClick={() => setInvitando(true)}>
               <UserPlus />
               Invitar
             </Button>
-          )}
+          )
+        }
+      />
+
+      <div className="grid gap-4 lg:grid-cols-3">
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle>Miembros</CardTitle>
         </CardHeader>
 
         <CardContent className="px-0 pb-0 pt-2">
@@ -129,9 +135,7 @@ export function FamiliaClient({
 
         <Card>
           <CardHeader>
-            <div>
-              <CardTitle>Los roles</CardTitle>
-            </div>
+            <CardTitle>Los roles</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2.5 pt-2 text-xs">
             <p>
@@ -158,6 +162,8 @@ export function FamiliaClient({
         {esOwner && <ModuloAlquileres activo={alquileresActivo} />}
 
         <SalirDeLaFamilia nombre={familiaNombre} />
+      </div>
+
       </div>
 
       <InvitarDialog
@@ -301,10 +307,8 @@ function RenombrarFamilia({ nombre }: { nombre: string }) {
   return (
     <Card>
       <CardHeader>
-        <div>
-          <CardTitle>Nombre</CardTitle>
-        </div>
-      </CardHeader>
+        <CardTitle>Nombre</CardTitle>
+        </CardHeader>
       <CardContent className="pt-2">
         <form
           action={async (fd) => setEstado(await renombrarFamiliaAction(estado, fd))}
@@ -437,31 +441,6 @@ function InvitarDialog({
   );
 }
 
-/** Campo de solo lectura con botón de copiar y confirmación efímera. */
-function EnlaceCopiable({ enlace }: { enlace: string }) {
-  const [copiado, setCopiado] = React.useState(false);
-
-  return (
-    <div className="flex gap-2">
-      <Input value={enlace} readOnly aria-label="Enlace de invitación" />
-      <Button
-        type="button"
-        size="sm"
-        variant="secondary"
-        className="shrink-0"
-        onClick={async () => {
-          await navigator.clipboard.writeText(enlace);
-          setCopiado(true);
-          setTimeout(() => setCopiado(false), 2000);
-        }}
-      >
-        {copiado ? <Check /> : <Copy />}
-        {copiado ? "Copiado" : "Copiar"}
-      </Button>
-    </div>
-  );
-}
-
 /** Invitaciones creadas y aún sin aceptar. */
 function InvitacionesPendientes({
   invitaciones,
@@ -471,10 +450,8 @@ function InvitacionesPendientes({
   return (
     <Card>
       <CardHeader>
-        <div>
-          <CardTitle>Invitaciones pendientes</CardTitle>
-          <CardDescription>Aún no han entrado.</CardDescription>
-        </div>
+        <CardTitle>Invitaciones pendientes</CardTitle>
+        <CardDescription>Aún no han entrado.</CardDescription>
       </CardHeader>
       <CardContent className="px-0 pb-0 pt-2">
         <ul className="divide-y divide-border border-t border-border">
@@ -547,10 +524,8 @@ function ModuloAlquileres({ activo }: { activo: boolean }) {
   return (
     <Card>
       <CardHeader>
-        <div>
-          <CardTitle>Alquileres</CardTitle>
-          <CardDescription>Módulo opcional</CardDescription>
-        </div>
+        <CardTitle>Alquileres</CardTitle>
+        <CardDescription>Módulo opcional</CardDescription>
       </CardHeader>
       <CardContent className="pt-2">
         <SwitchEnvio

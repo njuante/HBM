@@ -11,6 +11,7 @@ export const estadoPagoSchema = z.enum(["PENDIENTE", "PAGADA"]);
 
 // Metadatos de la factura (sin el archivo, que se valida aparte en la acción).
 export const facturaMetaSchema = z.object({
+  importe: opcionalNumero(),
   casaId: opcionalId(),
   gastoId: opcionalId(),
   emisor: opcionalTexto(120),

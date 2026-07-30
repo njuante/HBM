@@ -20,9 +20,14 @@ test("una factura vencida pendiente genera alerta en el panel", async ({ page })
     buffer: Buffer.from("%PDF-1.4\nvencida\n%%EOF"),
   });
   await page.getByLabel("Emisor").fill("Endesa");
-  await page.getByLabel("Fecha de vencimiento").fill("2020-01-15");
-  await page.getByRole("button", { name: /guardar factura/i }).click();
-  await expect(page.getByText("Endesa")).toBeVisible();
+  await page.getByLabel("Vencimiento").fill("2020-01-15");
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: /subir factura/i })
+    .click();
+  // Acotado a la tabla: en el diálogo el nombre del archivo también dice
+  // «endesa» y `getByText` casa por subcadena.
+  await expect(page.getByRole("cell", { name: /endesa/i }).first()).toBeVisible();
 
   // El panel muestra la alerta de factura vencida
   await page.goto("/dashboard");

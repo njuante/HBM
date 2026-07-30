@@ -9,15 +9,17 @@ import {
   Home,
   LayoutDashboard,
   LogOut,
+  ArrowLeftRight,
   FolderPlus,
   KeyRound,
+  Settings,
   Menu,
   PiggyBank,
   ReceiptText,
+  Search,
   Repeat,
   Tags,
-  TrendingDown,
-  TrendingUp,
+  Target,
   UserCog,
   Users,
   X,
@@ -34,36 +36,36 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { PaletaComandos } from "@/components/paleta-comandos";
+import { useAtajos } from "@/components/use-atajos";
+import { Kbd } from "@/components/ui/dialog";
 import { cambiarFamilia, logout } from "@/server/auth/actions";
 
 export type NavItem = { href: string; label: string; icon: LucideIcon };
 
+/**
+ * Lo que se usa a diario. Cinco entradas caben con holgura en la barra; con
+ * diez, los rótulos partían en dos líneas en cuanto la ventana bajaba de
+ * ~1.140 px, justo por encima del punto en el que la tira aparece.
+ */
 const NAV: NavItem[] = [
   { href: "/dashboard", label: "Panel", icon: LayoutDashboard },
-  { href: "/gastos", label: "Gastos", icon: TrendingDown },
-  { href: "/ingresos", label: "Ingresos", icon: TrendingUp },
+  { href: "/movimientos", label: "Movimientos", icon: ArrowLeftRight },
+  { href: "/ahorro", label: "Metas Ahorro", icon: Target },
   { href: "/facturas", label: "Facturas", icon: ReceiptText },
   { href: "/presupuestos", label: "Presupuestos", icon: PiggyBank },
   { href: "/recurrentes", label: "Recurrentes", icon: Repeat },
-  { href: "/categorias", label: "Categorías", icon: Tags },
-  { href: "/casas", label: "Casas", icon: Home },
-  { href: "/familia", label: "Familia", icon: Users },
 ];
 
-/**
- * Navegación de la familia. Alquileres solo aparece si el módulo está
- * encendido: es opcional y, apagado, no debe ocupar sitio ni existir.
- *
- * Se resuelve aquí, en el cliente, y no en el layout: los iconos son
- * componentes y cruzar la frontera servidor→cliente con ellos no es posible.
- */
-function navPara(alquileresActivo: boolean): NavItem[] {
-  if (!alquileresActivo) return NAV;
-  const i = NAV.findIndex((n) => n.href === "/casas");
+/** Lo que se configura una vez y se toca poco. Vive en un menú aparte. */
+function ajustesPara(alquileresActivo: boolean): NavItem[] {
   return [
-    ...NAV.slice(0, i + 1),
-    { href: "/alquileres", label: "Alquileres", icon: KeyRound },
-    ...NAV.slice(i + 1),
+    { href: "/categorias", label: "Categorías", icon: Tags },
+    { href: "/casas", label: "Casas", icon: Home },
+    ...(alquileresActivo
+      ? [{ href: "/alquileres", label: "Alquileres", icon: KeyRound }]
+      : []),
+    { href: "/familia", label: "Familia", icon: Users },
   ];
 }
 
@@ -71,6 +73,8 @@ export type Membership = { familiaId: string; nombre: string };
 
 const esActivo = (pathname: string, href: string) =>
   pathname === href || pathname.startsWith(href + "/");
+
+import { BottomNav } from "@/components/bottom-nav";
 
 export function AppShell({
   children,
@@ -90,13 +94,25 @@ export function AppShell({
   alquileresActivo?: boolean;
 }) {
   const pathname = usePathname();
-  const nav = React.useMemo(() => navPara(alquileresActivo), [alquileresActivo]);
+  const [paleta, setPaleta] = React.useState(false);
+  const abrirPaleta = React.useCallback(() => setPaleta(true), []);
+  useAtajos(abrirPaleta);
+
+  const ajustes = React.useMemo(
+    () => ajustesPara(alquileresActivo),
+    [alquileresActivo],
+  );
 
   return (
-    <div className="flex min-h-screen flex-1 flex-col">
+    <div className="flex min-h-screen flex-1 flex-col pb-16 lg:pb-0">
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/65">
         <div className="mx-auto flex h-14 w-full max-w-[1180px] items-center gap-3 px-4 sm:px-6">
-          <NavMovil nav={nav} pathname={pathname} familiaNombre={familiaNombre} />
+          <NavMovil
+            nav={NAV}
+            ajustes={ajustes}
+            pathname={pathname}
+            familiaNombre={familiaNombre}
+          />
 
           <Link
             href="/dashboard"
@@ -110,9 +126,20 @@ export function AppShell({
             </span>
           </Link>
 
-          <NavPestanas nav={nav} pathname={pathname} />
+          <NavPestanas nav={NAV} pathname={pathname} />
 
           <div className="ml-auto flex shrink-0 items-center gap-0.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={abrirPaleta}
+              className="hidden gap-2 text-muted-foreground sm:inline-flex"
+            >
+              <Search />
+              Buscar
+              <Kbd>⌘K</Kbd>
+            </Button>
+            <MenuAjustes ajustes={ajustes} pathname={pathname} />
             <ThemeToggle />
             <MenuUsuario
               userNombre={userNombre}
@@ -124,9 +151,17 @@ export function AppShell({
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-[1180px] flex-1 px-4 py-7 sm:px-6 sm:py-9">
+      <main className="mx-auto w-full max-w-[1180px] flex-1 px-4 py-5 sm:px-6 sm:py-9">
         {children}
       </main>
+
+      <BottomNav />
+
+      <PaletaComandos
+        abierta={paleta}
+        onOpenChange={setPaleta}
+        alquileresActivo={alquileresActivo}
+      />
     </div>
   );
 }
@@ -200,10 +235,12 @@ function NavPestanas({ nav, pathname }: { nav: NavItem[]; pathname: string }) {
 /** Cajón lateral en pantallas estrechas. Sustituye a la tira horizontal. */
 function NavMovil({
   nav,
+  ajustes,
   pathname,
   familiaNombre,
 }: {
   nav: NavItem[];
+  ajustes: NavItem[];
   pathname: string;
   familiaNombre: string;
 }) {
@@ -240,18 +277,21 @@ function NavMovil({
             </DialogPrimitive.Close>
           </div>
           <nav className="flex flex-col gap-0.5">
-            {nav.map(({ href, label, icon: Icon }) => {
+            {[...nav, ...ajustes].map(({ href, label, icon: Icon }, i) => {
               const activo = esActivo(pathname, href);
               return (
                 <Link
                   key={href}
                   href={href}
+                  // Un filete separa el uso diario de la configuración.
+                  data-separado={i === nav.length ? "" : undefined}
                   aria-current={activo ? "page" : undefined}
                   // Cerrar aquí y no en un efecto sobre `pathname`: la
                   // navegación es el evento, no una consecuencia del render.
                   onClick={() => setAbierto(false)}
                   className={cn(
                     "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
+                    "data-[separado]:mt-2 data-[separado]:border-t data-[separado]:border-border data-[separado]:pt-3",
                     activo
                       ? "bg-primary-soft text-primary"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -352,6 +392,48 @@ function MenuUsuario({
             </button>
           </DropdownMenuItem>
         </form>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/**
+ * Lo que se configura una vez. Sacarlo de la barra es lo que deja las cinco
+ * pestañas de uso diario respirando: con diez, los rótulos se partían.
+ */
+function MenuAjustes({
+  ajustes,
+  pathname,
+}: {
+  ajustes: NavItem[];
+  pathname: string;
+}) {
+  const dentro = ajustes.some((a) => esActivo(pathname, a.href));
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Ajustes"
+          className={cn("hidden lg:inline-flex", dentro && "text-primary")}
+        >
+          <Settings />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-44">
+        {ajustes.map(({ href, label, icon: Icon }) => (
+          <DropdownMenuItem key={href} asChild>
+            <Link href={href}>
+              <Icon />
+              <span className="flex-1">{label}</span>
+              {esActivo(pathname, href) && (
+                <Check className="size-3.5 !text-primary" />
+              )}
+            </Link>
+          </DropdownMenuItem>
+        ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );

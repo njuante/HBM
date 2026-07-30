@@ -163,6 +163,7 @@ export async function crearFactura(
       fechaEmision: meta.fechaEmision ?? null,
       fechaVencimiento: meta.fechaVencimiento ?? null,
       estadoPago: meta.estadoPago,
+      importe: meta.importe !== undefined ? meta.importe.toFixed(2) : null,
       archivoPath: archivo.path,
       archivoNombre: archivo.nombre,
       archivoTipo: archivo.tipo,
@@ -199,6 +200,7 @@ export async function actualizarFacturaMeta(
       fechaEmision: meta.fechaEmision ?? null,
       fechaVencimiento: meta.fechaVencimiento ?? null,
       estadoPago: meta.estadoPago,
+      importe: meta.importe !== undefined ? meta.importe.toFixed(2) : null,
       datosExtra: mezclarDatosExtra(existe.datosExtra, meta),
     },
   });

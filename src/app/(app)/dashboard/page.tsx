@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { LineChart, TrendingDown } from "lucide-react";
+import { LineChart, TrendingDown, Plus, FileText } from "lucide-react";
 import { requireFamilia } from "@/server/auth/dal";
 import { listCasas } from "@/server/db/casas";
 import {
@@ -10,20 +10,20 @@ import {
   serieDiaria,
   type RangoDashboard,
 } from "@/server/db/dashboard";
+import { listMovimientos } from "@/server/db/movimientos";
 import { alertasFacturas } from "@/server/db/facturas";
-import { resumenPresupuestos } from "@/server/db/presupuestos";
+import { resumenPresupuestos, listPresupuestos } from "@/server/db/presupuestos";
 import {
   asegurarRecurrencias,
   listPropuestas,
   proximosCargos,
 } from "@/server/db/recurrencias";
-import { toDateInputValue } from "@/lib/format";
 import { mesActual } from "@/lib/periodo";
 import { PageHeader } from "@/components/page-header";
 import { Avisos } from "@/components/avisos";
 import { PresupuestosPanel } from "@/components/presupuestos-panel";
-import { PropuestasPendientes } from "@/components/propuestas-pendientes";
 import { ProximosCargos } from "@/components/proximos-cargos";
+import { UltimosMovimientos } from "@/components/ultimos-movimientos";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { KpiCard } from "@/components/charts/kpi-card";
 import { FlujoMensualChart } from "@/components/charts/flujo-mensual";
 import { GastosPorCategoriaChart } from "@/components/charts/gastos-por-categoria";
-import { CalendarioGastoChart } from "@/components/charts/calendario-gasto";
+import { PresupuestoProgresoChart } from "@/components/charts/presupuesto-progreso-chart";
 import { FiltrosPanel } from "./filtros-panel";
 
 export default async function DashboardPage(props: {
@@ -42,7 +42,9 @@ export default async function DashboardPage(props: {
 
   const casaId = typeof sp.casaId === "string" && sp.casaId ? sp.casaId : undefined;
   const meses =
-    Number(sp.meses) === 3 || Number(sp.meses) === 12 ? Number(sp.meses) : 6;
+    Number(sp.meses) === 1 || Number(sp.meses) === 3 || Number(sp.meses) === 12
+      ? Number(sp.meses)
+      : 6;
 
   const now = new Date();
   const hasta = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
@@ -53,23 +55,31 @@ export default async function DashboardPage(props: {
   // que ya tocaban, antes de leer nada (ver `asegurarRecurrencias`).
   await asegurarRecurrencias(ctx.familiaId);
 
-  // La cabecera y los filtros se pintan de inmediato; el grueso entra por
-  // Suspense para que la página no quede en blanco esperando las consultas.
   const casas = await listCasas(ctx.familiaId);
 
   return (
     <div>
       <PageHeader
         title="Panel"
-        description={`${ctx.familia.nombre} · últimos ${meses} meses`}
+        description={`${ctx.familia.nombre} · últimos ${meses} ${meses === 1 ? "mes" : "meses"}`}
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild size="sm" variant="secondary" className="h-8 gap-1.5 text-xs font-medium">
+              <Link href="/movimientos">
+                <Plus className="size-3.5" /> Gasto / Ingreso
+              </Link>
+            </Button>
+            <Button asChild size="sm" className="h-8 gap-1.5 text-xs font-medium">
+              <Link href="/facturas">
+                <FileText className="size-3.5" /> Facturas
+              </Link>
+            </Button>
+          </div>
+        }
       />
 
       <Suspense fallback={null}>
         <BandaAvisos familiaId={ctx.familiaId} />
-      </Suspense>
-
-      <Suspense fallback={null}>
-        <Pendientes familiaId={ctx.familiaId} />
       </Suspense>
 
       <FiltrosPanel casas={casas} casaId={casaId} meses={meses} />
@@ -90,11 +100,6 @@ export default async function DashboardPage(props: {
   );
 }
 
-async function Pendientes({ familiaId }: { familiaId: string }) {
-  const propuestas = await listPropuestas(familiaId);
-  return <PropuestasPendientes propuestas={propuestas} className="mb-5" />;
-}
-
 async function Cargos({ familiaId }: { familiaId: string }) {
   const cargos = await proximosCargos(familiaId, 30);
   if (cargos.length === 0) return null;
@@ -102,9 +107,10 @@ async function Cargos({ familiaId }: { familiaId: string }) {
 }
 
 async function BandaAvisos({ familiaId }: { familiaId: string }) {
-  const [facturas, presupuestos] = await Promise.all([
+  const [facturas, presupuestos, propuestas] = await Promise.all([
     alertasFacturas(familiaId),
     resumenPresupuestos(familiaId, mesActual()),
+    listPropuestas(familiaId),
   ]);
   return (
     <Avisos
@@ -112,6 +118,7 @@ async function BandaAvisos({ familiaId }: { familiaId: string }) {
       proximas={facturas.proximas}
       excedidos={presupuestos.excedidos}
       avisosPresupuesto={presupuestos.avisos}
+      propuestas={propuestas.length}
     />
   );
 }
@@ -145,16 +152,22 @@ async function PanelContenido({
     1,
   );
 
-  const [kpis, serie, categorias, diaria, kpisAnterior] = await Promise.all([
+  const [kpis, serie, categorias, kpisAnterior, recientes, presupuestosItems, presupuestosResumen] = await Promise.all([
     kpisDashboard(familiaId, rango),
     resumenMensual(familiaId, rango),
     gastosPorCategoria(familiaId, rango),
-    serieDiaria(familiaId, rango),
     kpisDashboard(familiaId, {
       ...rango,
       desde: anteriorDesde,
       hasta: anteriorHasta,
     }),
+    listMovimientos(
+      familiaId,
+      { casaId: rango.casaId },
+      { porPagina: 5 },
+    ),
+    listPresupuestos(familiaId, mesActual()),
+    resumenPresupuestos(familiaId, mesActual()),
   ]);
 
   const hayDatos = kpis.ingresos > 0 || kpis.gastos > 0;
@@ -162,6 +175,14 @@ async function PanelContenido({
   // Sin base anterior no hay variación que enseñar.
   const delta = (actual: number, previo: number) =>
     previo > 0 ? (actual - previo) / previo : null;
+
+  const tasaAhorro = kpis.ingresos > 0 ? Math.round((kpis.saldo / kpis.ingresos) * 100) : null;
+  const sufijoSaldo =
+    tasaAhorro != null
+      ? `${tasaAhorro}% tasa de ahorro`
+      : kpis.saldo >= 0
+        ? "ahorro del periodo"
+        : "déficit del periodo";
 
   return (
     <>
@@ -184,7 +205,7 @@ async function PanelContenido({
           label="Saldo"
           valor={kpis.saldo}
           serie={serie.map((p) => p.ingresos - p.gastos)}
-          sufijo={kpis.saldo >= 0 ? "ahorro del periodo" : "déficit del periodo"}
+          sufijo={sufijoSaldo}
         />
         <KpiCard
           label="Facturas pendientes"
@@ -200,16 +221,11 @@ async function PanelContenido({
           <EmptyState
             icon={LineChart}
             titulo="Todavía no hay movimientos en este periodo"
-            descripcion="En cuanto registres el primer gasto o ingreso verás aquí el flujo mensual, el reparto por categoría y la intensidad diaria."
+            descripcion="En cuanto registres el primer gasto o ingreso verás aquí el flujo mensual y el consumo de presupuesto."
             accion={
-              <div className="flex gap-2">
-                <Button asChild size="sm">
-                  <Link href="/gastos">Registrar un gasto</Link>
-                </Button>
-                <Button asChild size="sm" variant="secondary">
-                  <Link href="/ingresos">Registrar un ingreso</Link>
-                </Button>
-              </div>
+              <Button asChild size="sm">
+                <Link href="/movimientos">Registrar el primero</Link>
+              </Button>
             }
           />
         </Card>
@@ -234,13 +250,19 @@ async function PanelContenido({
             </div>
 
             <div className="lg:col-span-2">
-              <CalendarioGastoChart
-                data={diaria}
-                desde={toDateInputValue(rango.desde)}
-                hasta={toDateInputValue(rango.hasta)}
+              <PresupuestoProgresoChart
+                items={presupuestosItems}
+                limiteTotal={presupuestosResumen.limite}
+                gastadoTotal={presupuestosResumen.gastado}
               />
             </div>
           </div>
+
+          {recientes.items.length > 0 && (
+            <div className="mt-1">
+              <UltimosMovimientos items={recientes.items} />
+            </div>
+          )}
         </div>
       )}
     </>

@@ -18,10 +18,21 @@ export function Card({
   );
 }
 
+/**
+ * Cabecera de tarjeta: título y descripción apilados, y una acción opcional a
+ * la derecha.
+ *
+ * Antes era un `flex justify-between` a secas, así que un `CardTitle` y un
+ * `CardDescription` sueltos se repartían a los dos extremos y la descripción
+ * acababa pegada al borde derecho. Quien lo esquivaba tenía que envolverlos en
+ * un `<div>` que solo existía para eso.
+ */
 export function CardHeader({
   className,
+  accion,
+  children,
   ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
+}: React.HTMLAttributes<HTMLDivElement> & { accion?: React.ReactNode }) {
   return (
     <div
       className={cn(
@@ -29,7 +40,10 @@ export function CardHeader({
         className,
       )}
       {...props}
-    />
+    >
+      <div className="min-w-0">{children}</div>
+      {accion && <div className="shrink-0">{accion}</div>}
+    </div>
   );
 }
 

@@ -104,3 +104,22 @@ export async function descartarPropuestaAction(formData: FormData): Promise<void
   await descartarPropuesta(ctx.familiaId, id);
   revalidar();
 }
+
+import { vincularGastoARecurrencia } from "@/server/db/recurrencias";
+
+export async function vincularGastoAction(
+  gastoId: string,
+  frecuencia: "MENSUAL" | "ANUAL" | "SEMANAL" = "MENSUAL",
+) {
+  const ctx = await requireFamilia();
+  const res = await vincularGastoARecurrencia(
+    ctx.familiaId,
+    ctx.userId,
+    gastoId,
+    frecuencia,
+  );
+  if (res.ok) {
+    revalidar();
+  }
+  return res;
+}

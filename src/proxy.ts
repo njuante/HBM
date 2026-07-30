@@ -8,6 +8,7 @@ const RUTAS_PROTEGIDAS = [
   "/dashboard",
   "/casas",
   "/familia",
+  "/movimientos",
   "/gastos",
   "/ingresos",
   "/facturas",

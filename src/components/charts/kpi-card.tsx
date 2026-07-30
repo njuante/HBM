@@ -76,11 +76,20 @@ export function KpiCard({
     </>
   );
 
-  const clases =
-    "block rounded-lg border border-border bg-card px-4 py-3.5 transition-colors";
+  const accentClass =
+    tono === "ingresos"
+      ? "before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:bg-success/80"
+      : tono === "gastos"
+        ? "before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:bg-danger/80"
+        : "before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:bg-primary/80";
+
+  const clases = cn(
+    "relative overflow-hidden block rounded-xl border border-border/80 bg-card px-4 py-3.5 shadow-xs transition-all hover:shadow-md hover:border-border",
+    accentClass,
+  );
 
   return href ? (
-    <Link href={href} className={cn(clases, "hover:border-border-strong")}>
+    <Link href={href} className={cn(clases, "hover:border-primary/50")}>
       {cuerpo}
     </Link>
   ) : (

@@ -13,6 +13,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
+import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -22,6 +24,7 @@ import { Progress } from "@/components/ui/progress";
 import { Segmented } from "@/components/ui/segmented";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field, FormError } from "@/components/ui/field";
+import { MasOpciones } from "@/components/ui/mas-opciones";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { ConfirmarAccion } from "@/components/ui/alert-dialog";
 import { MarcaCategoria } from "@/components/ui/icono-categoria";
@@ -78,6 +81,7 @@ export function PresupuestosClient({
   casas,
   medias,
   puedeGestionar,
+  abrirNuevo,
 }: {
   mes: string;
   items: PresupuestoConsumo[];
@@ -87,43 +91,35 @@ export function PresupuestosClient({
   casas: { id: string; nombre: string }[];
   medias: Record<string, number>;
   puedeGestionar: boolean;
+  /** Llega desde la paleta de comandos. */
+  abrirNuevo?: boolean;
 }) {
   const [editando, setEditando] = React.useState<PresupuestoConsumo | null>(null);
-  const [creando, setCreando] = React.useState(false);
-
-  const porcentaje = limite > 0 ? Math.round((gastado / limite) * 100) : 0;
+  const [creando, setCreando] = React.useState(Boolean(abrirNuevo));
 
   return (
-    <>
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <NavegadorMes mes={mes} />
-        {puedeGestionar && (
-          <Button onClick={() => setCreando(true)}>
-            <Plus />
-            Nuevo presupuesto
-          </Button>
-        )}
-      </div>
-
-      {limite > 0 && (
-        <Card className="mb-4 p-4">
-          <div className="flex items-baseline justify-between gap-3">
-            <p className="text-2xs font-medium uppercase tracking-wide text-faint">
-              Total mensual por categorías
-            </p>
-            <p className="font-serif text-lg font-medium tabular-nums">
-              {formatEUR(gastado)}{" "}
-              <span className="text-sm text-faint">de {formatEUR(limite)}</span>
-            </p>
+    <div>
+      <PageHeader
+        title="Presupuestos"
+        description={
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <NavegadorMes mes={mes} />
+            {limite > 0 && (
+              <span className="text-xs text-faint">
+                {formatEUR(gastado)} de {formatEUR(limite)} en categorías
+              </span>
+            )}
           </div>
-          <Progress
-            className="mt-2.5"
-            valor={porcentaje}
-            estado={porcentaje > 100 ? "EXCEDIDO" : porcentaje >= 85 ? "AVISO" : "OK"}
-            ariaLabel="Consumo total del mes"
-          />
-        </Card>
-      )}
+        }
+        action={
+          puedeGestionar && (
+            <Button onClick={() => setCreando(true)}>
+              <Plus />
+              Nuevo presupuesto
+            </Button>
+          )
+        }
+      />
 
       <Card className="overflow-hidden">
         {items.length === 0 ? (
@@ -174,7 +170,7 @@ export function PresupuestosClient({
         medias={medias}
         mes={mes}
       />
-    </>
+    </div>
   );
 }
 
@@ -222,6 +218,7 @@ function FilaPresupuesto({
 }) {
   const { resolvedTheme } = useTheme();
   const [confirmando, setConfirmando] = React.useState(false);
+  const { avisar } = useToast();
   const etiqueta = ETIQUETA_ESTADO[p.estado];
   const nombre = p.categoria?.nombre ?? "Todas las categorías";
 
@@ -321,6 +318,7 @@ function FilaPresupuesto({
           const fd = new FormData();
           fd.set("id", p.id);
           void eliminarPresupuestoAction(fd);
+          avisar(`Presupuesto de ${nombre} eliminado`);
         }}
       />
     </li>
@@ -355,6 +353,9 @@ function PresupuestoDialog({
   const [periodo, setPeriodo] = React.useState<"MENSUAL" | "ANUAL">(
     presupuesto?.periodo ?? "MENSUAL",
   );
+  // Vive en estado y viaja en un campo oculto: «Más opciones» no se renderiza
+  // mientras está plegado, y este dato es obligatorio.
+  const [desde, setDesde] = React.useState(presupuesto?.desde ?? mes);
 
   // La media del histórico es la mejor primera propuesta: evita la página en
   // blanco y ancla la cifra en lo que de verdad se gasta.
@@ -379,6 +380,7 @@ function PresupuestoDialog({
         >
           {presupuesto && <input type="hidden" name="id" value={presupuesto.id} />}
           <input type="hidden" name="periodo" value={periodo} />
+          <input type="hidden" name="desde" value={desde} />
 
           <DialogBody className="space-y-3">
             <Field label="Categoría" error={estado?.errors?.categoriaId}>
@@ -396,62 +398,64 @@ function PresupuestoDialog({
               </Select>
             </Field>
 
-            {casas.length > 1 && (
-              <Field label="Casa" opcional>
-                <Select name="casaId" defaultValue={presupuesto?.casa?.id ?? ""}>
-                  <option value="">Todas las casas</option>
-                  {casas.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            )}
-
-            <div>
-              <span className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                Periodo
-              </span>
-              <Segmented
-                ariaLabel="Periodo del presupuesto"
-                value={periodo}
-                onChange={setPeriodo}
-                options={[
-                  { value: "MENSUAL", label: "Cada mes" },
-                  { value: "ANUAL", label: "Al año" },
-                ]}
-              />
-            </div>
-
             <Field
               label="Límite"
               error={estado?.errors?.importe}
               ayuda={
                 sugerido > 0 && !presupuesto
-                  ? `Vienes gastando unos ${formatEUR(sugerido)} por ${
-                      periodo === "ANUAL" ? "año" : "mes"
-                    }.`
+                  ? `Es lo que vienes gastando; cámbialo si quieres otro tope.`
                   : undefined
               }
             >
+              {/* La media histórica se rellena, no se sugiere: el dato ya está
+                  calculado y teclearlo otra vez no aporta nada. */}
               <Input
+                key={`${categoriaId}-${periodo}`}
                 name="importe"
                 inputMode="decimal"
                 adornoDer="€"
-                defaultValue={presupuesto?.importe ?? ""}
-                placeholder={sugerido > 0 ? sugerido.toFixed(2) : "0,00"}
+                defaultValue={
+                  presupuesto?.importe ?? (sugerido > 0 ? sugerido.toFixed(2) : "")
+                }
                 autoFocus
                 required
               />
             </Field>
 
-            <div className="grid grid-cols-2 gap-3">
+            <MasOpciones>
+              <div className="sm:col-span-2">
+                <span className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                  Periodo
+                </span>
+                <Segmented
+                  ariaLabel="Periodo del presupuesto"
+                  value={periodo}
+                  onChange={setPeriodo}
+                  options={[
+                    { value: "MENSUAL", label: "Cada mes" },
+                    { value: "ANUAL", label: "Al año" },
+                  ]}
+                />
+              </div>
+
+              {casas.length > 1 && (
+                <Field label="Casa" opcional>
+                  <Select name="casaId" defaultValue={presupuesto?.casa?.id ?? ""}>
+                    <option value="">Todas las casas</option>
+                    {casas.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nombre}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              )}
+
               <Field label="Desde" error={estado?.errors?.desde}>
                 <Input
                   type="month"
-                  name="desde"
-                  defaultValue={presupuesto?.desde ?? mes}
+                  value={desde}
+                  onChange={(e) => setDesde(e.target.value)}
                   required
                 />
               </Field>
@@ -462,7 +466,7 @@ function PresupuestoDialog({
                   defaultValue={presupuesto?.hasta ?? ""}
                 />
               </Field>
-            </div>
+            </MasOpciones>
 
             {estado?.message && <FormError>{estado.message}</FormError>}
           </DialogBody>

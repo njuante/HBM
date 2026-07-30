@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Money } from "@/components/ui/money";
+import { useToast } from "@/components/ui/toast";
 import { MarcaCategoria } from "@/components/ui/icono-categoria";
 import { armonizarColor } from "@/components/charts/chart-theme";
 import { useTheme } from "@/components/theme-provider";
@@ -29,6 +30,7 @@ export function PropuestasPendientes({
   className?: string;
 }) {
   const { resolvedTheme } = useTheme();
+  const { avisar } = useToast();
   if (propuestas.length === 0) return null;
 
   return (
@@ -64,7 +66,12 @@ export function PropuestasPendientes({
             />
 
             <div className="flex shrink-0 gap-1">
-              <form action={confirmarPropuestaAction}>
+              <form
+                action={(fd) => {
+                  confirmarPropuestaAction(fd);
+                  avisar(`«${p.concepto}» apuntado`);
+                }}
+              >
                 <input type="hidden" name="id" value={p.id} />
                 <Button
                   type="submit"
@@ -75,7 +82,12 @@ export function PropuestasPendientes({
                   <Check />
                 </Button>
               </form>
-              <form action={descartarPropuestaAction}>
+              <form
+                action={(fd) => {
+                  descartarPropuestaAction(fd);
+                  avisar(`«${p.concepto}» descartado`);
+                }}
+              >
                 <input type="hidden" name="id" value={p.id} />
                 <Button
                   type="submit"

@@ -78,11 +78,7 @@ export function PortalClient({
 function ResumenContrato({ c }: { c: Contrato }) {
   return (
     <Card className="p-5">
-      <h2 className="font-serif text-base font-medium tracking-tight">
-        Tu alquiler
-      </h2>
-
-      <dl className="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
         <div>
           <dt className="text-2xs uppercase tracking-wide text-faint">Renta</dt>
           <dd className="mt-1 font-serif text-lg font-medium">
@@ -142,7 +138,7 @@ function FilaFactura({ f }: { f: FacturaPortalDTO }) {
       </TD>
 
       <TD numerico className="font-medium">
-        {f.importe !== null ? <Money value={f.importe} tono="gasto" /> : "—"}
+        {f.importe !== null ? <Money value={f.importe} /> : "—"}
       </TD>
 
       <TD>

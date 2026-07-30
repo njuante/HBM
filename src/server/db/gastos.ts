@@ -198,6 +198,64 @@ export async function crearGasto(
 }
 
 /**
+ * Crea un gasto prorrateado en 1, 2 (bimensual) o 3 (trimestral) meses para ajustar
+ * facturas periódicas de suministros (luz, agua, gas) al mes que corresponde.
+ */
+export async function crearGastoProrrateado(
+  familiaId: string,
+  usuarioId: string,
+  data: GastoInput,
+  mesesProrrateo: number = 1,
+): Promise<CrearResult> {
+  const err = await validarPertenencia(
+    familiaId,
+    data.casaId,
+    data.categoriaId,
+    data.subcategoriaId,
+  );
+  if (err) return { ok: false, error: err };
+
+  if (mesesProrrateo <= 1) {
+    return crearGasto(familiaId, usuarioId, data);
+  }
+
+  const importeTotal = data.importe;
+  const cuotaMensual = Math.round((importeTotal / mesesProrrateo) * 100) / 100;
+  const etiquetaPeriodo = mesesProrrateo === 3 ? "Trimestral" : "Bimensual";
+
+  let primerId = "";
+
+  await prisma.$transaction(async (tx) => {
+    for (let i = 0; i < mesesProrrateo; i++) {
+      const fechaCuota = new Date(data.fecha);
+      fechaCuota.setMonth(fechaCuota.getMonth() + i);
+
+      const conceptoCuota = `${data.concepto} (${etiquetaPeriodo} ${i + 1}/${mesesProrrateo}) - Total ${importeTotal.toFixed(2)}€`;
+
+      const g = await tx.gasto.create({
+        data: {
+          familiaId,
+          usuarioId,
+          casaId: data.casaId,
+          categoriaId: data.categoriaId,
+          subcategoriaId: data.subcategoriaId ?? null,
+          importe: cuotaMensual.toFixed(2),
+          fecha: fechaCuota,
+          concepto: conceptoCuota,
+          emisor: data.emisor ?? null,
+          metodoPago: data.metodoPago ?? null,
+          recurrente: false,
+        },
+      });
+
+      if (i === 0) primerId = g.id;
+    }
+  });
+
+  return { ok: true, id: primerId };
+}
+
+/**
  * `autorId` acota la operación al creador del movimiento: se pasa cuando quien
  * edita no tiene permiso de gestión sobre toda la familia (ver `autorRequerido`).
  */

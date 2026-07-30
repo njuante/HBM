@@ -20,6 +20,7 @@ import { flattenZodErrors, type FormState } from "@/lib/validation/form";
 
 function parseMeta(formData: FormData) {
   return facturaMetaSchema.safeParse({
+    importe: formData.get("importe"),
     casaId: formData.get("casaId"),
     gastoId: formData.get("gastoId"),
     emisor: formData.get("emisor"),

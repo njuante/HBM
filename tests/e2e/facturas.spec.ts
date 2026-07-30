@@ -21,16 +21,24 @@ test("subir una factura PDF, verla servida y marcarla pagada", async ({ page }) 
     buffer: Buffer.from("%PDF-1.4\nfactura de prueba\n%%EOF"),
   });
   await page.getByLabel("Emisor").fill("Iberdrola");
-  await page.getByRole("button", { name: /guardar factura/i }).click();
+  await page.getByLabel("Importe").fill("78,30");
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: /subir factura/i })
+    .click();
 
-  // Aparece la tarjeta con el badge de estado (span, no la opción del filtro)
-  await expect(page.getByText("Iberdrola")).toBeVisible();
-  await expect(
-    page.locator("span.rounded-full", { hasText: /pendiente/i }).first(),
-  ).toBeVisible();
+  await expect(page.getByRole("cell", { name: /iberdrola/i }).first()).toBeVisible();
+  await expect(page.getByText(/78,30/)).toBeVisible();
 
-  // El archivo se sirve por la API autenticada (200 + PDF)
-  const href = await page.getByRole("link", { name: /ver archivo/i }).first().getAttribute("href");
+  // Nace pendiente: el estado es un interruptor en la propia fila.
+  const pagada = page.getByRole("switch", { name: /marcar iberdrola como pagada/i });
+  await expect(pagada).not.toBeChecked();
+
+  // El archivo se sirve por la API autenticada (200 + PDF).
+  const href = await page
+    .getByRole("link", { name: /abrir archivo de iberdrola/i })
+    .first()
+    .getAttribute("href");
   expect(href).toContain("/api/facturas/");
   const info = await page.evaluate(async (url) => {
     const r = await fetch(url, { cache: "no-store" });
@@ -40,8 +48,8 @@ test("subir una factura PDF, verla servida y marcarla pagada", async ({ page }) 
   expect(info.ct).toContain("application/pdf");
 
   // Marcar como pagada
-  await page.getByRole("button", { name: /marcar pagada/i }).click();
+  await pagada.click();
   await expect(
-    page.locator("span.rounded-full", { hasText: /pagada/i }).first(),
-  ).toBeVisible();
+    page.getByRole("switch", { name: /marcar iberdrola como pagada/i }),
+  ).toBeChecked();
 });

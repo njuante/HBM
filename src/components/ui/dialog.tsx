@@ -37,15 +37,16 @@ export const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] max-w-lg",
-        "-translate-x-1/2 -translate-y-1/2",
-        "rounded-xl border border-border bg-card shadow-lg",
+        "fixed left-1/2 top-1/2 z-50 w-[calc(100vw-1.5rem)] max-w-lg",
+        "-translate-x-1/2 -translate-y-1/2 max-h-[90vh] overflow-hidden flex flex-col",
+        "rounded-2xl sm:rounded-xl border border-border bg-card shadow-lg",
         "focus:outline-none",
         "data-[state=open]:animate-panel-in data-[state=closed]:animate-panel-out",
         className,
       )}
       {...props}
     >
+      <div className="mx-auto mt-2 h-1 w-9 rounded-full bg-border-strong/60 sm:hidden shrink-0" />
       {children}
       {!sinCerrar && (
         <DialogPrimitive.Close

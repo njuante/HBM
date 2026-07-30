@@ -15,24 +15,17 @@ test("categorías por defecto y alta de una nueva", async ({ page }) => {
   await registrar(page);
   await page.goto("/categorias");
 
-  // Categorías de gasto por defecto (span de la lista, no la opción del select)
-  await expect(
-    page.locator("span.font-medium", { hasText: "Suministros" }),
-  ).toBeVisible();
-  await expect(
-    page.locator("span.font-medium", { hasText: "Luz" }),
-  ).toBeVisible();
+  // Categorías de gasto por defecto, madre e hija.
+  await expect(page.getByText("Suministros", { exact: true })).toBeVisible();
+  await expect(page.getByText("Luz", { exact: true })).toBeVisible();
 
-  // Crear una categoría nueva
-  await page.getByLabel(/nueva categoría de gasto/i).fill("Mascotas");
-  await page.getByRole("button", { name: /^añadir$/i }).click();
-  await expect(
-    page.locator("span.font-medium", { hasText: "Mascotas" }),
-  ).toBeVisible();
+  // Crear una categoría nueva desde el diálogo.
+  await page.getByRole("button", { name: /nueva categoría/i }).first().click();
+  await page.getByLabel("Nombre", { exact: true }).fill("Mascotas");
+  await page.getByRole("button", { name: /crear categoría/i }).click();
+  await expect(page.getByText("Mascotas", { exact: true })).toBeVisible();
 
-  // Cambiar a ingresos
-  await page.getByRole("button", { name: /^ingresos$/i }).click();
-  await expect(
-    page.locator("span.font-medium", { hasText: "Nómina" }),
-  ).toBeVisible();
+  // Cambiar a ingresos con el conmutador.
+  await page.getByRole("radio", { name: /^ingresos$/i }).click();
+  await expect(page.getByText("Nómina", { exact: true })).toBeVisible();
 });

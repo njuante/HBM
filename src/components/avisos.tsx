@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, Clock, PiggyBank } from "lucide-react";
+import { AlertTriangle, ArrowRight, Clock, Inbox, PiggyBank } from "lucide-react";
 import { formatFecha } from "@/lib/format";
 import { formatEUR } from "@/lib/money";
 import { cn } from "@/lib/utils";
@@ -16,17 +16,21 @@ export function Avisos({
   proximas,
   excedidos,
   avisosPresupuesto,
+  propuestas = 0,
 }: {
   vencidas: AlertaFactura[];
   proximas: AlertaFactura[];
   excedidos: PresupuestoConsumo[];
   avisosPresupuesto: PresupuestoConsumo[];
+  /** Movimientos recurrentes esperando un sí o un no. */
+  propuestas?: number;
 }) {
   const nada =
     vencidas.length === 0 &&
     proximas.length === 0 &&
     excedidos.length === 0 &&
-    avisosPresupuesto.length === 0;
+    avisosPresupuesto.length === 0 &&
+    propuestas === 0;
   if (nada) return null;
 
   return (
@@ -88,6 +92,22 @@ export function Avisos({
           />
           <Enlace href="/facturas?estadoPago=PENDIENTE" className="text-warning">
             Ver pendientes
+          </Enlace>
+        </Alert>
+      )}
+
+      {propuestas > 0 && (
+        <Alert
+          variant="neutral"
+          icon={Inbox}
+          titulo={
+            propuestas === 1
+              ? "1 movimiento pendiente de confirmar"
+              : `${propuestas} movimientos pendientes de confirmar`
+          }
+        >
+          <Enlace href="/recurrentes" className="text-muted-foreground">
+            Revisarlos
           </Enlace>
         </Alert>
       )}

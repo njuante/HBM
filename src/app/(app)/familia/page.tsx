@@ -1,7 +1,6 @@
 import { requireFamilia, puedeGestionar } from "@/server/auth/dal";
 import { listMiembros } from "@/server/db/familia";
 import { listInvitaciones } from "@/server/db/invitaciones";
-import { PageHeader } from "@/components/page-header";
 import { FamiliaClient, type MiembroDTO } from "./familia-client";
 
 export default async function FamiliaPage() {
@@ -20,12 +19,7 @@ export default async function FamiliaPage() {
   }));
 
   return (
-    <div>
-      <PageHeader
-        title="Familia"
-        description="Miembros de tu hogar y sus permisos."
-      />
-      <FamiliaClient
+    <FamiliaClient
         familiaNombre={ctx.familia.nombre}
         miembros={dto}
         currentUserId={ctx.userId}
@@ -34,6 +28,5 @@ export default async function FamiliaPage() {
         invitaciones={invitaciones}
         alquileresActivo={ctx.alquileresActivo}
       />
-    </div>
   );
 }

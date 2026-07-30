@@ -22,8 +22,11 @@ export function PageHeader({
         <h1 className="font-serif text-3xl font-medium leading-none tracking-tight">
           {title}
         </h1>
+        {/* `div` y no `p`: la descripción no siempre es texto suelto —el
+            navegador de meses y el saldo son bloques— y anidarlos dentro de un
+            párrafo rompía la hidratación. */}
         {description && (
-          <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+          <div className="mt-2 text-sm text-muted-foreground">{description}</div>
         )}
       </div>
       {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}

@@ -14,7 +14,7 @@ test("crear un presupuesto y verlo consumirse con un gasto", async ({ page }) =>
   // Una casa, necesaria para poder apuntar el gasto.
   await page.goto("/casas");
   await page.getByRole("button", { name: /añadir casa/i }).first().click();
-  await page.getByLabel("Nombre").fill("Casa Pre");
+  await page.getByLabel("Nombre", { exact: true }).fill("Casa Pre");
   await page.getByRole("button", { name: /crear casa/i }).click();
   await expect(page.getByText("Casa Pre")).toBeVisible();
 
@@ -32,12 +32,12 @@ test("crear un presupuesto y verlo consumirse con un gasto", async ({ page }) =>
   );
 
   // Un gasto de 90 € deja el presupuesto en aviso (90 %).
-  await page.goto("/gastos");
-  await page.getByRole("button", { name: /añadir gasto/i }).first().click();
+  await page.goto("/movimientos");
+  await page.getByRole("button", { name: /^añadir$/i }).first().click();
   await page.getByLabel("Concepto").fill("Compra grande");
   await page.getByLabel(/importe/i).fill("90");
   await page.getByRole("radio", { name: "Alimentación" }).click();
-  await page.getByRole("button", { name: /guardar gasto/i }).click();
+  await page.getByRole("button", { name: /añadir gasto/i }).click();
   await expect(page.getByText("Compra grande")).toBeVisible();
 
   await page.goto("/presupuestos");

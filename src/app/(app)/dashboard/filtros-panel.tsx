@@ -9,6 +9,7 @@ import { Segmented } from "@/components/ui/segmented";
 export type CasaOpt = { id: string; nombre: string };
 
 const PERIODOS = [
+  { value: "1", label: "1 m" },
   { value: "3", label: "3 m" },
   { value: "6", label: "6 m" },
   { value: "12", label: "12 m" },

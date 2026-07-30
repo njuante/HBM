@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { requireFamilia, puedeGestionar } from "@/server/auth/dal";
 import { listContratos } from "@/server/db/alquileres";
 import { listCasas } from "@/server/db/casas";
-import { PageHeader } from "@/components/page-header";
 import { AlquileresClient } from "./alquileres-client";
 
 export default async function AlquileresPage() {
@@ -17,12 +16,7 @@ export default async function AlquileresPage() {
   ]);
 
   return (
-    <div>
-      <PageHeader
-        title="Alquileres"
-        description="Contratos, rentas y lo que compartes con cada inquilino."
-      />
-      <AlquileresClient
+    <AlquileresClient
         contratos={contratos}
         casas={casas.map((c) => ({
           id: c.id,
@@ -31,6 +25,5 @@ export default async function AlquileresPage() {
         }))}
         puedeGestionar={puedeGestionar(ctx)}
       />
-    </div>
   );
 }

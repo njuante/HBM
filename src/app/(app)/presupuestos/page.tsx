@@ -8,7 +8,6 @@ import { listCategorias } from "@/server/db/categorias";
 import { listCasas } from "@/server/db/casas";
 import { TipoCategoria } from "@/generated/prisma/enums";
 import { mesActual } from "@/lib/periodo";
-import { PageHeader } from "@/components/page-header";
 import { PresupuestosClient } from "./presupuestos-client";
 
 const MES_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -31,12 +30,7 @@ export default async function PresupuestosPage(props: {
   ]);
 
   return (
-    <div>
-      <PageHeader
-        title="Presupuestos"
-        description="Cuánto quieres gastar en cada cosa, y cuánto llevas."
-      />
-      <PresupuestosClient
+    <PresupuestosClient
         mes={mes}
         items={items}
         limite={resumen.limite}
@@ -50,7 +44,7 @@ export default async function PresupuestosPage(props: {
         casas={casas.map((c) => ({ id: c.id, nombre: c.nombre }))}
         medias={medias}
         puedeGestionar={puedeGestionar(ctx)}
+        abrirNuevo={sp.nuevo === "1"}
       />
-    </div>
   );
 }
