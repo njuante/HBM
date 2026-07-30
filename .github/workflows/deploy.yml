@@ -107,9 +107,11 @@ jobs:
 
           # Un `up -d` correcto no garantiza que sigan en pie: si Caddy no
           # puede tomar el 80 (aaPanel), sale a los pocos segundos y sin esta
-          # comprobación el despliegue se daría por bueno.
+          # comprobación el despliegue se daría por bueno. Se recorren los
+          # servicios que el perfil activo define, para no exigir Caddy cuando
+          # el proxy lo pone aaPanel.
           sleep 12
-          for servicio in db app caddy; do
+          for servicio in $(docker compose -f docker-compose.prod.yml config --services); do
             cid=$(docker compose -f docker-compose.prod.yml ps -q "$servicio" || true)
             if [ -z "$cid" ]; then
               echo "::error::El servicio '$servicio' no ha llegado a crearse"

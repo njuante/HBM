@@ -56,13 +56,36 @@ push a main
   └─ CI: tipos, lint, unitarios, e2e (escritorio y móvil)
       └─ build de la imagen en un runner ARM nativo → ghcr.io/njuante/hbm
           └─ ssh al servidor: docker compose pull && up -d
-              └─ comprueba que db/app/caddy siguen en pie y que el sitio responde 200
+              └─ comprueba que los servicios siguen en pie y que el sitio responde 200
 ```
 
-`docker-compose.prod.yml` levanta tres servicios: Postgres, la app y **Caddy**, que saca y renueva
-el certificado de Let's Encrypt solo. Las migraciones se aplican al arrancar el contenedor
-(`docker-entrypoint.sh`). Ni la base de datos ni la app publican puertos: lo único accesible desde
-fuera son el 80 y el 443 de Caddy.
+`docker-compose.prod.yml` levanta Postgres y la app; las migraciones se aplican al arrancar el
+contenedor (`docker-entrypoint.sh`). Postgres no publica nada y la app solo escucha en
+`127.0.0.1:3000`, así que desde fuera no hay nada accesible: **el TLS lo pone un proxy delante**.
+
+Hay dos formas de poner ese proxy, y en este servidor manda aaPanel:
+
+| | Quién termina el TLS | Cuándo |
+| --- | --- | --- |
+| **aaPanel** (por defecto) | El nginx del panel, con su Let's Encrypt | El servidor ya tiene aaPanel ocupando el 80 y el 443 |
+| **Caddy** | El contenedor `caddy` del compose | Máquina limpia, sin panel. Se activa con `COMPOSE_PROFILES=caddy` en el `.env` |
+
+### Con aaPanel (lo que aplica aquí)
+
+En aaPanel: **Website → Add site** con el dominio `nucahome.me`, y dentro del sitio:
+
+1. **SSL → Let's Encrypt** para emitir el certificado, y activa *Force HTTPS*.
+2. **Reverse proxy → Add**, destino `http://127.0.0.1:3000`.
+3. Comprueba que la configuración incluye estas cabeceras — aaPanel no siempre pone la de
+   `X-Forwarded-Proto`, y sin ella la app no sabe que va por HTTPS:
+
+   ```nginx
+   proxy_set_header Host              $host;
+   proxy_set_header X-Real-IP         $remote_addr;
+   proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+   proxy_set_header X-Forwarded-Proto $scheme;
+   client_max_body_size 25m;   # para subir facturas en PDF o foto
+   ```
 
 > **El HTTPS no es cosmético.** En producción la cookie de sesión va marcada `Secure`
 > (`src/lib/session.ts`), así que sobre HTTP el navegador la descarta y **el login falla sin dar
@@ -70,7 +93,9 @@ fuera son el 80 y el 443 de Caddy.
 
 ### Preparar el servidor (una sola vez)
 
-1. **DNS**: `nucahome.me` (y `www`) apuntando por registro A a la IP pública de la instancia.
+1. **DNS**: en Cloudflare, registro **A** de `nucahome.me` → IP pública de la instancia, con
+   **Proxy status: DNS only** (nube gris). Con la nube naranja Cloudflare corta el TLS por su
+   cuenta y el reto de Let's Encrypt no llega al servidor.
 
 2. **Los dos cortafuegos de Oracle.** Es el tropiezo clásico: OCI filtra en la *security list* de la
    VCN **y además** la propia máquina trae reglas que solo dejan pasar el 22. Hay que abrir 80 y 443
@@ -79,6 +104,7 @@ fuera son el 80 y el 443 de Caddy.
    ```bash
    # En la consola de OCI: Networking → VCN → Security List → Ingress
    #   0.0.0.0/0 TCP 80 y 443
+   # (aaPanel suele abrirlos en la máquina, pero nunca en la security list de OCI)
    # Y en la máquina (Ubuntu):
    sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
    sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
@@ -101,19 +127,6 @@ fuera son el 80 y el 443 de Caddy.
 
 5. **Haz público el paquete de GHCR** la primera vez (Packages → hbm → Package settings → Change
    visibility). Así el servidor puede descargar la imagen sin credenciales.
-
-> ### ⚠️ Si el servidor tiene aaPanel
-> aaPanel suele dejar su nginx escuchando en el 80 y el 443, y entonces **Caddy no arranca**
-> (`address already in use`). El workflow lo detecta y falla en claro en vez de dejar el
-> despliegue a medias. Dos salidas:
->
-> - **Ceder los puertos a Caddy**: parar el nginx del panel (`systemctl stop nginx && systemctl
->   disable nginx`, o desde la propia interfaz de aaPanel). Solo si no sirves más sitios ahí.
-> - **Dejar que aaPanel siga siendo el proxy** (menos invasivo): borra el servicio `caddy` de
->   `docker-compose.prod.yml`, añade `ports: ["127.0.0.1:3000:3000"]` al servicio `app`, y en
->   aaPanel crea un sitio para `nucahome.me` con su certificado Let's Encrypt y un *reverse proxy*
->   a `http://127.0.0.1:3000`. Comprueba que reenvía `X-Forwarded-Proto`, que aaPanel no siempre
->   pone por defecto.
 
 ### Configurar GitHub
 
