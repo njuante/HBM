@@ -29,6 +29,12 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "HBM ERP",
   },
+  // iOS ignora los iconos del manifest: sin `apple-touch-icon` la pantalla de
+  // inicio usa una captura de la página como icono.
+  icons: {
+    icon: "/icon-192.png",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export const viewport: Viewport = {
@@ -36,6 +42,9 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: light)", color: "#fbfaf8" },
     { media: "(prefers-color-scheme: dark)", color: "#0a0a0b" },
   ],
+  // Sin esto, `env(safe-area-inset-*)` vale 0 en iOS y el contenido se mete
+  // bajo la barra de estado, que con `black-translucent` es transparente.
+  viewportFit: "cover",
 };
 
 // Se ejecuta antes del primer pintado para evitar el destello de tema claro.

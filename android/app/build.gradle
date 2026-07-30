@@ -1,5 +1,14 @@
 apply plugin: 'com.android.application'
 
+// Firma de release. Las credenciales viven en android/keystore.properties, que
+// está fuera de git: sin ese fichero el build de release sigue funcionando pero
+// sale sin firmar (y por tanto no instalable). Ver README.
+def ficheroFirma = rootProject.file("keystore.properties")
+def firma = new Properties()
+if (ficheroFirma.exists()) {
+    ficheroFirma.withInputStream { firma.load(it) }
+}
+
 android {
     namespace "com.hbm.hogar"
     compileSdk rootProject.ext.compileSdkVersion
@@ -16,8 +25,21 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (firma['storeFile']) {
+                storeFile rootProject.file(firma['storeFile'])
+                storePassword firma['storePassword']
+                keyAlias firma['keyAlias']
+                keyPassword firma['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
+            if (firma['storeFile']) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

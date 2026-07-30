@@ -1,0 +1,42 @@
+# Caddy saca y renueva el certificado de Let's Encrypt solo. Requisitos:
+#  - que {$DOMAIN} apunte por DNS a la IP pública de la instancia;
+#  - que los puertos 80 y 443 estén abiertos en la security list de OCI **y**
+#    en el cortafuegos de la propia máquina (ver README: en Oracle hay dos).
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	reverse_proxy app:3000 {
+		# Caddy ya manda X-Forwarded-Proto: https, que es lo que necesita la app
+		# para saber que va detrás de TLS.
+		header_up X-Real-IP {remote_host}
+	}
+
+	# Las facturas se sirven por una ruta de la app, no desde disco: subir el
+	# límite de cuerpo permite adjuntar PDFs y fotos grandes.
+	request_body {
+		max_size 25MB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# La cabecera de servidor no aporta nada y delata la versión.
+		-Server
+	}
+
+	log {
+		output file /data/access.log {
+			roll_size 10MB
+			roll_keep 5
+		}
+	}
+}
+
+# El www lleva al dominio principal, para no partir las sesiones entre dos
+# orígenes: la cookie se emite para uno solo.
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}

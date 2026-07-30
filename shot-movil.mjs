@@ -1,14 +1,18 @@
-import { chromium } from "@playwright/test";
+import { chromium, devices } from "@playwright/test";
 
+// Capturas a tamaño de móvil. Mismo uso que shot.mjs:
+//   node shot-movil.mjs /dashboard,/movimientos dark
 const RUTAS = process.argv[2]?.split(",") ?? ["/dashboard"];
 const TEMA = process.argv[3] ?? "light";
-// Directorio de salida: SHOT_OUT o ./.shots (gitignorado).
 const OUT = process.env.SHOT_OUT ?? ".shots";
-// Servidor contra el que disparar, por si el 3000 está ocupado.
 const BASE = process.env.SHOT_BASE ?? "http://localhost:3000";
 
 const b = await chromium.launch();
-const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 } });
+// iPhone 13: 390x844. El caso estrecho de verdad es 375, así que se fuerza.
+const ctx = await b.newContext({
+  ...devices["iPhone 13"],
+  viewport: { width: 375, height: 812 },
+});
 const p = await ctx.newPage();
 
 p.on("console", (m) => {
@@ -31,10 +35,15 @@ for (const ruta of RUTAS) {
   await p.goto(BASE + ruta);
   await p.waitForLoadState("networkidle").catch(() => {});
   await p.waitForTimeout(700);
+
+  // Un desbordamiento horizontal no se ve en la captura pero rompe la página.
+  const desborde = await p.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
   const nombre = ruta.replace(/[^a-z0-9]/gi, "_") || "root";
-  const file = `${OUT}/${nombre}-${TEMA}.png`;
+  const file = `${OUT}/movil-${nombre}-${TEMA}.png`;
   await p.screenshot({ path: file, fullPage: true });
-  console.log("✓", file);
+  console.log(desborde > 0 ? `✗ ${file} — DESBORDA ${desborde}px` : `✓ ${file}`);
 }
 
 await b.close();

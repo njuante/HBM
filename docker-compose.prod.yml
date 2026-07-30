@@ -1,0 +1,69 @@
+# Despliegue en el servidor (Oracle Cloud, ARM). Se copia junto al Caddyfile a
+# /www/apps/hbm y lo usa el workflow de despliegue.
+#
+# Diferencias con el docker-compose.yml de desarrollo, y por qué:
+#  - La app NO se construye aquí: se descarga ya compilada de GHCR. La
+#    instancia no gasta CPU ni RAM compilando Next.
+#  - Postgres NO publica el 5432. En el compose de desarrollo está abierto por
+#    comodidad; en una máquina con IP pública eso es la base de datos entera
+#    expuesta a internet.
+#  - La app tampoco publica el 3000: solo Caddy habla con ella, por la red
+#    interna. Lo único accesible desde fuera son el 80 y el 443.
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hbm
+      # Sin valor por defecto a propósito: si falta, el arranque falla en vez
+      # de levantar la base de datos con la contraseña de ejemplo.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}
+      POSTGRES_DB: hbm
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hbm -d hbm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    image: ${APP_IMAGE:-ghcr.io/njuante/hbm:latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://hbm:${POSTGRES_PASSWORD}@db:5432/hbm?schema=public"
+      UPLOADS_DIR: "/app/uploads"
+      NODE_ENV: "production"
+      APP_URL: "https://${DOMAIN:?define DOMAIN en .env}"
+      CRON_SECRET: ${CRON_SECRET:-}
+    volumes:
+      - uploads_data:/app/uploads
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    # Caddy necesita el 80 y el 443: el 80 para el reto de Let's Encrypt y la
+    # redirección, el 443 para servir. Si aaPanel ya los tiene ocupados, esto
+    # no arranca (ver README).
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data       # certificados: perderlos fuerza a reemitir
+      - caddy_config:/config
+
+volumes:
+  db_data:
+  uploads_data:
+  caddy_data:
+  caddy_config:

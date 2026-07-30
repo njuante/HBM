@@ -1,0 +1,122 @@
+name: CI
+
+# En cada PR y, vía `workflow_call`, como primer paso del despliegue.
+# No se dispara también en push a `main` a propósito: deploy.yml ya lo invoca,
+# y si no correrían los mismos tests dos veces por cada push.
+on:
+  pull_request:
+  workflow_call:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Los tests son de integración: hablan con Postgres de verdad, no con mocks.
+  DATABASE_URL: postgresql://hbm:hbm_ci@localhost:5432/hbm?schema=public
+  UPLOADS_DIR: ./uploads
+
+jobs:
+  calidad:
+    name: Tipos, lint y unitarios
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: hbm
+          POSTGRES_PASSWORD: hbm_ci
+          POSTGRES_DB: hbm
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U hbm -d hbm"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+
+      # El esquema y las migraciones tienen que decir lo mismo. Si alguien toca
+      # schema.prisma y se olvida de generar la migración, en local no se nota
+      # —su base ya tiene la tabla— pero un despliegue nuevo nace sin ella y la
+      # pantalla que la use revienta. Ya pasó con las metas de ahorro.
+      # Se compara la base recién migrada contra el esquema: si sobra algo en
+      # schema.prisma, es que falta una migración.
+      - name: Las migraciones cubren el esquema
+        run: |
+          if ! npx prisma migrate diff \
+                --from-config-datasource \
+                --to-schema prisma/schema.prisma \
+                --exit-code > /dev/null 2>&1; then
+            echo "::error::schema.prisma tiene cambios sin migración. Genérala con 'npm run db:migrate'."
+            npx prisma migrate diff --from-config-datasource \
+              --to-schema prisma/schema.prisma --script || true
+            exit 1
+          fi
+          echo "✓ migraciones y esquema coinciden"
+
+      - name: Comprobación de tipos
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests unitarios y de integración
+        run: npm test
+
+  e2e:
+    name: End-to-end
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: hbm
+          POSTGRES_PASSWORD: hbm_ci
+          POSTGRES_DB: hbm
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U hbm -d hbm"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+
+      # Solo chromium: el proyecto «movil» también corre sobre chromium a
+      # propósito, para no arrastrar la descarga de webkit.
+      - run: npx playwright install --with-deps chromium
+
+      - name: Build de producción
+        run: npm run build
+
+      # Arranca su propio servidor en el 3100 (ver playwright.config.ts).
+      - name: Tests e2e (escritorio y móvil)
+        run: npm run test:e2e
+
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-resultados
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

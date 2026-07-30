@@ -35,12 +35,12 @@
         </provider>
     </application>
 
-    <!-- Permissions -->
-
+    <!--
+      Solo INTERNET: la app es una ventana sobre el servidor y no hay ningún
+      plugin nativo instalado (assets/capacitor.plugins.json está vacío).
+      Cámara, almacenamiento y biometría venían de la plantilla, no se usaban, y
+      pedir permisos sensibles sin motivo complica la publicación en Play.
+      Las facturas se suben con el <input type="file"> de la propia web.
+    -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
-    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
 </manifest>
