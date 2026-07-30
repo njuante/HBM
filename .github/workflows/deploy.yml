@@ -186,20 +186,32 @@ jobs:
           # comprobación el despliegue se daría por bueno. Se recorren los
           # servicios que el perfil activo define, para no exigir Caddy cuando
           # el proxy lo pone aaPanel.
-          sleep 12
-          for servicio in $(docker compose -f docker-compose.prod.yml config --services); do
-            cid=$(docker compose -f docker-compose.prod.yml ps -q "$servicio" || true)
-            if [ -z "$cid" ]; then
-              echo "::error::El servicio '$servicio' no ha llegado a crearse"
-              docker compose -f docker-compose.prod.yml logs --tail=40 "$servicio" || true
-              exit 1
-            fi
-            estado=$(docker inspect -f '{{.State.Status}}' "$cid")
-            if [ "$estado" != "running" ]; then
-              echo "::error::El servicio '$servicio' no está en marcha (estado: $estado)"
-              docker compose -f docker-compose.prod.yml logs --tail=40 "$servicio" || true
-              exit 1
-            fi
+          # Se mira dos veces con margen entre medias, y se cuentan los
+          # reinicios: un contenedor que muere y revive aparece como «running»
+          # si se le pregunta en el instante justo, y así un arranque roto pasó
+          # por bueno una vez.
+          for intento in 1 2; do
+            sleep 12
+            for servicio in $(docker compose -f docker-compose.prod.yml config --services); do
+              cid=$(docker compose -f docker-compose.prod.yml ps -q "$servicio" || true)
+              if [ -z "$cid" ]; then
+                echo "::error::El servicio '$servicio' no ha llegado a crearse"
+                docker compose -f docker-compose.prod.yml logs --tail=40 "$servicio" || true
+                exit 1
+              fi
+              estado=$(docker inspect -f '{{.State.Status}}' "$cid")
+              reinicios=$(docker inspect -f '{{.RestartCount}}' "$cid")
+              if [ "$estado" != "running" ]; then
+                echo "::error::El servicio '$servicio' no está en marcha (estado: $estado)"
+                docker compose -f docker-compose.prod.yml logs --tail=40 "$servicio" || true
+                exit 1
+              fi
+              if [ "$reinicios" -gt 2 ]; then
+                echo "::error::El servicio '$servicio' se ha reiniciado $reinicios veces: está en bucle"
+                docker compose -f docker-compose.prod.yml logs --tail=40 "$servicio" || true
+                exit 1
+              fi
+            done
           done
 
           docker image prune -f
