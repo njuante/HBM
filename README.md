@@ -125,8 +125,8 @@ En aaPanel: **Website → Add site** con el dominio `nucahome.me`, y dentro del 
    chmod 600 .env
    ```
 
-5. **Haz público el paquete de GHCR** la primera vez (Packages → hbm → Package settings → Change
-   visibility). Así el servidor puede descargar la imagen sin credenciales.
+5. **El paquete de GHCR ya es público**, así que el servidor descarga la imagen sin credenciales.
+   Si alguna vez lo pasas a privado, habrá que autenticar el `docker pull` en la máquina.
 
 ### Configurar GitHub
 

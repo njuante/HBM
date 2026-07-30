@@ -67,30 +67,54 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Sin esto, con los secretos vacíos ssh recibe «@» como destino, escupe
+      # su pantalla de ayuda y sale con 255: un error que no dice nada de lo
+      # que en realidad falta.
+      - name: Comprobar que están los secretos
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          faltan=()
+          [ -n "$SSH_HOST" ]        || faltan+=(SSH_HOST)
+          [ -n "$SSH_USER" ]        || faltan+=(SSH_USER)
+          [ -n "$SSH_KEY" ]         || faltan+=(SSH_KEY)
+          [ -n "$SSH_KNOWN_HOSTS" ] || faltan+=(SSH_KNOWN_HOSTS)
+          if [ ${#faltan[@]} -gt 0 ]; then
+            echo "::error::Faltan estos secretos: ${faltan[*]}. Cómo darlos de alta, en el README (sección «Configurar GitHub»)."
+            exit 1
+          fi
+
       - name: Preparar SSH
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
         run: |
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s\n' "${{ secrets.SSH_KEY }}" > ~/.ssh/id_deploy
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
           # La huella del servidor se fija como secreto en vez de aceptar la
           # primera que llegue: si no, un intermediario podría suplantarlo.
-          printf '%s\n' "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
       - name: Copiar compose y Caddyfile
         env:
           DESTINO: ${{ vars.DEPLOY_PATH || '/www/apps/hbm' }}
+          REMOTO_SSH: ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
         run: |
-          ssh -i ~/.ssh/id_deploy "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
-            "mkdir -p '$DESTINO'"
+          ssh -i ~/.ssh/id_deploy "$REMOTO_SSH" "mkdir -p '$DESTINO'"
           scp -i ~/.ssh/id_deploy docker-compose.prod.yml Caddyfile \
-            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:$DESTINO/"
+            "$REMOTO_SSH:$DESTINO/"
 
       - name: Levantar la nueva versión
         env:
           DESTINO: ${{ vars.DEPLOY_PATH || '/www/apps/hbm' }}
+          REMOTO_SSH: ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
         run: |
-          ssh -i ~/.ssh/id_deploy "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+          ssh -i ~/.ssh/id_deploy "$REMOTO_SSH" \
             "DESTINO='$DESTINO' bash -se" <<'REMOTO'
           set -euo pipefail
           cd "$DESTINO"
