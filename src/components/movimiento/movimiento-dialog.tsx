@@ -25,6 +25,7 @@ import { MasOpciones } from "@/components/ui/mas-opciones";
 import { FieldError, FormError } from "@/components/ui/field";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ComboboxTexto, type ComboOption } from "@/components/ui/combobox";
+import { useModTecla } from "@/components/use-mod-tecla";
 import { ImporteInput } from "./importe-input";
 import { FechaChips } from "./fecha-chips";
 import { CategoriaChips, type CategoriaChip } from "./categoria-chips";
@@ -70,9 +71,6 @@ const METODOS = [
   ["DOMICILIACION", "Domiciliación"],
   ["OTRO", "Otro"],
 ] as const;
-
-const esMac = () =>
-  typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 
 export function MovimientoDialog({
   tipoInicial,
@@ -192,6 +190,7 @@ function Formulario({
   );
   const [origen, setOrigen] = React.useState(defaults?.origen ?? "");
   const [metodoPago, setMetodoPago] = React.useState(defaults?.metodoPago ?? "");
+  const mod = useModTecla();
 
   const sinCasas = camposGasto && casas.length === 0;
 
@@ -276,8 +275,6 @@ function Formulario({
     );
   }
 
-  const mod = esMac() ? "⌘" : "Ctrl";
-
   return (
     <form ref={formRef} action={enviar} onKeyDown={onKeyDown}>
       {defaults?.id && <input type="hidden" name="id" value={defaults.id} />}
@@ -333,6 +330,46 @@ function Formulario({
           />
           <FieldError>{estado?.errors?.concepto?.[0]}</FieldError>
         </div>
+
+        {/* Fecha y casa son obligatorias en el esquema. Estuvieron fuera del
+            formulario y el alta fallaba en silencio: sin campo no hay dato que
+            enviar, y el error de validación no tenía dónde pintarse. */}
+        <div>
+          <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+            Fecha
+          </p>
+          <FechaChips value={fecha} onChange={setFecha} />
+          <FieldError>{estado?.errors?.fecha?.[0]}</FieldError>
+        </div>
+
+        {casas.length === 1 ? (
+          // Con una sola casa no hay nada que decidir: va y no estorba.
+          <input type="hidden" name="casaId" value={casaId} />
+        ) : (
+          <div>
+            <label
+              htmlFor="mov-casa"
+              className="mb-1.5 block text-xs font-medium text-muted-foreground"
+            >
+              Casa
+            </label>
+            <Select
+              id="mov-casa"
+              name="casaId"
+              value={casaId}
+              onChange={(e) => setCasaId(e.target.value)}
+              aria-invalid={Boolean(estado?.errors?.casaId)}
+            >
+              <option value="">Selecciona una casa…</option>
+              {casas.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
+              ))}
+            </Select>
+            <FieldError>{estado?.errors?.casaId?.[0]}</FieldError>
+          </div>
+        )}
 
         <div>
           <p className="mb-1.5 text-xs font-medium text-muted-foreground">

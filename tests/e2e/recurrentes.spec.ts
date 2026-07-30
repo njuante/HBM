@@ -41,11 +41,24 @@ test("crear una recurrencia manual y confirmar su propuesta", async ({ page }) =
   await expect(page.getByText(/pendientes? de confirmar/i)).toBeVisible();
 
   await page.goto("/recurrentes");
-  await page.getByRole("button", { name: /confirmar gimnasio/i }).first().click();
+  // La recurrencia arranca en enero, así que hay una propuesta por cada mes
+  // transcurrido. Se confirma una sola.
+  const porConfirmar = page.getByRole("button", { name: /confirmar gimnasio/i });
+  // `count()` no espera; hay que dejar que la bandeja se pinte antes de pulsar.
+  await expect(porConfirmar.first()).toBeVisible();
+  await porConfirmar.first().click();
 
-  // Confirmada, el gasto ya existe y la bandeja se vacía.
-  await page.goto("/movimientos");
-  await expect(page.getByText("Gimnasio")).toBeVisible();
+  // Lo que importa es el resultado: el gasto acaba existiendo. No se afirma
+  // sobre cuántas propuestas quedan, porque la materialización perezosa corre
+  // en cada carga y puede reponer la lista mientras tanto; y `click()` vuelve
+  // al enviar la acción, no al terminarla, así que se reintenta la recarga.
+  await expect(async () => {
+    await page.goto("/movimientos");
+    await expect(
+      page.getByText("Gimnasio").filter({ visible: true }).first(),
+    ).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 15000 });
+
   await expect(page.getByText(/39,90/).first()).toBeVisible();
 });
 
@@ -72,7 +85,7 @@ test("un gasto se convierte en recurrencia desde su fila", async ({ page }) => {
   await page.getByLabel(/importe/i).fill("13,99");
   await page.getByRole("radio", { name: "Ocio" }).click();
   await page.getByRole("button", { name: /añadir gasto/i }).click();
-  await expect(page.getByText("Netflix")).toBeVisible();
+  await expect(page.getByText("Netflix").filter({ visible: true }).first()).toBeVisible();
 
   await page.getByRole("button", { name: /acciones de netflix/i }).click();
   await page.getByRole("menuitem", { name: /convertir en recurrente/i }).click();

@@ -351,8 +351,16 @@ export async function confirmarPropuesta(
         skipDuplicates: true,
       });
     }
-    // La propuesta desaparece: ya vive como movimiento real.
-    await tx.movimientoPropuesto.delete({ where: { id: p.id } });
+    // Se marca como resuelta en vez de borrarse, por el mismo motivo que en
+    // `descartarPropuesta`: si se borra, la siguiente materialización vuelve a
+    // proponer esa fecha y la propuesta reaparece una y otra vez aunque el
+    // movimiento ya exista. `descartadaAt` es hoy el único campo disponible y
+    // se usa como «resuelta»; separar confirmada de descartada pediría una
+    // migración.
+    await tx.movimientoPropuesto.update({
+      where: { id: p.id },
+      data: { descartadaAt: new Date() },
+    });
   });
 
   return true;

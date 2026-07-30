@@ -45,15 +45,16 @@ export default async function FacturasPage(props: {
 
   return (
     <FacturasClient
-        alquileresActivo={ctx.alquileresActivo}
-        puedeGestionar={puedeGestionar(ctx)}
-        items={items}
-        casas={casas.map((c) => ({ id: c.id, nombre: c.nombre }))}
-        gastosDisponibles={gastos.map((g) => ({
-          id: g.id,
-          nombre: `${formatFecha(g.fecha)} · ${g.concepto}`,
-        }))}
-        filtros={filtros}
-      />
+      alquileresActivo={ctx.alquileresActivo}
+      puedeGestionar={puedeGestionar(ctx)}
+      items={items}
+      casas={casas.map((c) => ({ id: c.id, nombre: c.nombre }))}
+      gastosDisponibles={gastos.map((g) => ({
+        id: g.id,
+        nombre: `${formatFecha(g.fecha)} · ${g.concepto}`,
+      }))}
+      filtros={filtros}
+      abrirNuevo={sp.nuevo === "1"}
+    />
   );
 }

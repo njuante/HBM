@@ -12,6 +12,7 @@ const RUTAS_PROTEGIDAS = [
   "/gastos",
   "/ingresos",
   "/facturas",
+  "/ahorro",
   "/categorias",
   "/presupuestos",
   "/recurrentes",

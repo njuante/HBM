@@ -66,9 +66,12 @@ export function PropuestasPendientes({
             />
 
             <div className="flex shrink-0 gap-1">
+              {/* Con `await`: sin él la transición termina antes de que
+                  responda el servidor y se pierde la revalidación, así que la
+                  propuesta seguía en la lista como si no hubiera pasado nada. */}
               <form
-                action={(fd) => {
-                  confirmarPropuestaAction(fd);
+                action={async (fd) => {
+                  await confirmarPropuestaAction(fd);
                   avisar(`«${p.concepto}» apuntado`);
                 }}
               >
@@ -83,8 +86,8 @@ export function PropuestasPendientes({
                 </Button>
               </form>
               <form
-                action={(fd) => {
-                  descartarPropuestaAction(fd);
+                action={async (fd) => {
+                  await descartarPropuestaAction(fd);
                   avisar(`«${p.concepto}» descartado`);
                 }}
               >
