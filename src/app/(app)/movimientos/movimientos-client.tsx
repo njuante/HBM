@@ -173,7 +173,7 @@ export function MovimientosClient({
         action={
           <div className="flex items-center gap-2">
             <Button variant="secondary" onClick={() => setImportarAbierto(true)} className="gap-1.5 text-xs">
-              <FileSpreadsheet className="size-4 text-emerald-500" />
+              <FileSpreadsheet className="size-4 text-success" />
               Importar Extracto
             </Button>
             <Button onClick={() => setBorrador({})}>
@@ -207,15 +207,9 @@ export function MovimientosClient({
               hayFiltros ? "Nada con estos filtros" : "Aún no hay movimientos"
             }
             descripcion={
-              hayFiltros ? "Prueba a quitar alguno." : "Empieza por el primero."
-            }
-            accion={
-              !hayFiltros && (
-                <Button size="sm" onClick={() => setBorrador({})}>
-                  <Plus />
-                  Añadir
-                </Button>
-              )
+              hayFiltros
+                ? "Prueba a quitar alguno."
+                : "Usa «Añadir» ahí arriba para apuntar el primero."
             }
           />
         ) : (

@@ -26,7 +26,7 @@ test("crear casa, gasto e ingreso y ver el saldo", async ({ page }) => {
   await page.getByLabel(/importe/i).fill("42,50");
   await page.getByRole("radio", { name: "Alimentación" }).click();
   await page.getByRole("button", { name: /añadir gasto/i }).click();
-  await expect(page.getByText("Compra test")).toBeVisible();
+  await expect(page.getByText("Compra test").filter({ visible: true }).first()).toBeVisible();
 
   await page.getByRole("button", { name: /^añadir$/i }).first().click();
   await page.getByRole("radio", { name: "Ingreso" }).click();
@@ -34,14 +34,14 @@ test("crear casa, gasto e ingreso y ver el saldo", async ({ page }) => {
   await page.getByLabel(/importe/i).fill("1000");
   await page.getByRole("radio", { name: "Nómina" }).click();
   await page.getByRole("button", { name: /añadir ingreso/i }).click();
-  await expect(page.getByText("Nómina test")).toBeVisible();
+  await expect(page.getByText("Nómina test").filter({ visible: true }).first()).toBeVisible();
 
   // El saldo de la cabecera es la resta de los dos.
   await expect(page.getByText(/957,50/).first()).toBeVisible();
 
   // Los filtros por tipo dejan ver cada lado por separado.
   await page.getByRole("radio", { name: "Ingresos" }).click();
-  await expect(page.getByText("Nómina test")).toBeVisible();
+  await expect(page.getByText("Nómina test").filter({ visible: true }).first()).toBeVisible();
   await expect(page.getByText("Compra test")).toHaveCount(0);
 });
 

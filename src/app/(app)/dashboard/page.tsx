@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { LineChart, TrendingDown, Plus, FileText } from "lucide-react";
+import { LineChart, TrendingDown, Plus } from "lucide-react";
 import { requireFamilia } from "@/server/auth/dal";
 import { listCasas } from "@/server/db/casas";
 import {
@@ -21,7 +21,6 @@ import {
 import { mesActual } from "@/lib/periodo";
 import { PageHeader } from "@/components/page-header";
 import { Avisos } from "@/components/avisos";
-import { PresupuestosPanel } from "@/components/presupuestos-panel";
 import { ProximosCargos } from "@/components/proximos-cargos";
 import { UltimosMovimientos } from "@/components/ultimos-movimientos";
 import { Card } from "@/components/ui/card";
@@ -62,19 +61,16 @@ export default async function DashboardPage(props: {
       <PageHeader
         title="Panel"
         description={`${ctx.familia.nombre} · últimos ${meses} ${meses === 1 ? "mes" : "meses"}`}
+        // Una sola acción, y que haga lo que promete: el «+» abre el diálogo
+        // en vez de limitarse a navegar. El botón «Facturas» que había al lado
+        // no era una acción, era el enlace que ya está en la navegación.
         action={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button asChild size="sm" variant="secondary" className="h-8 gap-1.5 text-xs font-medium">
-              <Link href="/movimientos">
-                <Plus className="size-3.5" /> Gasto / Ingreso
-              </Link>
-            </Button>
-            <Button asChild size="sm" className="h-8 gap-1.5 text-xs font-medium">
-              <Link href="/facturas">
-                <FileText className="size-3.5" /> Facturas
-              </Link>
-            </Button>
-          </div>
+          <Button asChild size="sm">
+            <Link href="/movimientos?nuevo=1">
+              <Plus />
+              Apuntar movimiento
+            </Link>
+          </Button>
         }
       />
 
@@ -88,10 +84,10 @@ export default async function DashboardPage(props: {
         <PanelContenido familiaId={ctx.familiaId} rango={rango} meses={meses} />
       </Suspense>
 
-      <div className="mt-3 grid gap-3 lg:grid-cols-2">
-        <Suspense fallback={null}>
-          <Presupuestos familiaId={ctx.familiaId} />
-        </Suspense>
+      {/* El consumo de presupuestos ya lo cuenta `PresupuestoProgresoChart`
+          más arriba, y con más detalle. Tenerlo dos veces en la misma pantalla
+          era repetir el mismo dato con otra forma. */}
+      <div className="mt-3">
         <Suspense fallback={null}>
           <Cargos familiaId={ctx.familiaId} />
         </Suspense>
@@ -119,18 +115,6 @@ async function BandaAvisos({ familiaId }: { familiaId: string }) {
       excedidos={presupuestos.excedidos}
       avisosPresupuesto={presupuestos.avisos}
       propuestas={propuestas.length}
-    />
-  );
-}
-
-async function Presupuestos({ familiaId }: { familiaId: string }) {
-  const resumen = await resumenPresupuestos(familiaId, mesActual());
-  if (resumen.destacados.length === 0) return null;
-  return (
-    <PresupuestosPanel
-      items={resumen.destacados}
-      limite={resumen.limite}
-      gastado={resumen.gastado}
     />
   );
 }

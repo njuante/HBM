@@ -23,7 +23,7 @@ test("el panel muestra KPIs y gráficas tras registrar movimientos", async ({ pa
   await page.getByLabel(/importe/i).fill("42,50");
   await page.getByRole("radio", { name: "Alimentación" }).click();
   await page.getByRole("button", { name: /añadir gasto/i }).click();
-  await expect(page.getByText("Compra dash")).toBeVisible();
+  await expect(page.getByText("Compra dash").filter({ visible: true }).first()).toBeVisible();
 
   await page.getByRole("button", { name: /^añadir$/i }).first().click();
   await page.getByRole("radio", { name: "Ingreso" }).click();
@@ -31,7 +31,7 @@ test("el panel muestra KPIs y gráficas tras registrar movimientos", async ({ pa
   await page.getByLabel(/importe/i).fill("1000");
   await page.getByRole("radio", { name: "Nómina" }).click();
   await page.getByRole("button", { name: /añadir ingreso/i }).click();
-  await expect(page.getByText("Nómina dash")).toBeVisible();
+  await expect(page.getByText("Nómina dash").filter({ visible: true }).first()).toBeVisible();
 
   // Panel: saldo = 1000 - 42,50 = 957,50 y al menos una gráfica de Recharts.
   await page.goto("/dashboard");

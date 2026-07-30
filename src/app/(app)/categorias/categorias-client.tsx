@@ -136,14 +136,6 @@ function Arbol({
           icon={Tags}
           titulo="No hay categorías"
           descripcion={`Crea la primera categoría de ${tipo === "GASTO" ? "gasto" : "ingreso"} para poder clasificar los movimientos.`}
-          accion={
-            puedeGestionar && (
-              <Button size="sm" onClick={() => onCrear({ modo: "crear", tipo })}>
-                <Plus />
-                Nueva categoría
-              </Button>
-            )
-          }
         />
       </Card>
     );
@@ -232,7 +224,7 @@ function Linea({
               variant="ghost"
               size="icon-sm"
               aria-label={`Acciones de ${item.nombre}`}
-              className="opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
+              className="accion-fila"
             >
               <MoreHorizontal />
             </Button>

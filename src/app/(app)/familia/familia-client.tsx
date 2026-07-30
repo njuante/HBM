@@ -107,8 +107,11 @@ export function FamiliaClient({
         }
       />
 
+      {/* `min-w-0` en las celdas: por defecto una celda de rejilla no baja de
+          su contenido mínimo, así que un email largo la ensanchaba y con ella
+          la página entera, sin dejar que `truncate` llegara a actuar. */}
       <div className="grid gap-4 lg:grid-cols-3">
-      <Card className="lg:col-span-2">
+      <Card className="min-w-0 lg:col-span-2">
         <CardHeader>
           <CardTitle>Miembros</CardTitle>
         </CardHeader>
@@ -127,7 +130,7 @@ export function FamiliaClient({
         </CardContent>
       </Card>
 
-      <div className="space-y-4">
+      <div className="min-w-0 space-y-4">
         {puedeGestionar && invitaciones.length > 0 && (
           <InvitacionesPendientes invitaciones={invitaciones} />
         )}
@@ -228,7 +231,7 @@ function MiembroFila({
             variant="ghost"
             size="icon-sm"
             aria-label={`Quitar a ${m.nombre}`}
-            className="opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
+            className="accion-fila"
             onClick={() => setConfirmando(true)}
           >
             <Trash2 />
@@ -282,7 +285,9 @@ function RolMenu({
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Rol</DropdownMenuLabel>
           <DropdownMenuRadioGroup
-            value={rolActual}
+            // Sobre el estado local, no sobre la prop: así el punto salta al
+            // pulsar y no espera a que vuelva el servidor.
+            value={rol}
             onValueChange={(v) => {
               setRol(v as Rol);
               // El valor del input aún no ha llegado al DOM en este tick.

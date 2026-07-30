@@ -38,7 +38,7 @@ test("crear un presupuesto y verlo consumirse con un gasto", async ({ page }) =>
   await page.getByLabel(/importe/i).fill("90");
   await page.getByRole("radio", { name: "Alimentación" }).click();
   await page.getByRole("button", { name: /añadir gasto/i }).click();
-  await expect(page.getByText("Compra grande")).toBeVisible();
+  await expect(page.getByText("Compra grande").filter({ visible: true }).first()).toBeVisible();
 
   await page.goto("/presupuestos");
   await expect(page.getByRole("progressbar", { name: /Alimentación/ })).toHaveAttribute(

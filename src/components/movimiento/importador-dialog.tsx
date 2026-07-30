@@ -13,6 +13,7 @@ import {
   Filter,
 } from "lucide-react";
 import { parseSantanderExtract, type MovimientoImportado } from "@/lib/bank-parsers/santander";
+import type { ElementoImportacion } from "@/server/db/importador";
 import { formatEUR } from "@/lib/money";
 import { formatFecha } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -50,7 +51,9 @@ export function ImportadorDialog({
   onOpenChange: (open: boolean) => void;
   categorias: CategoriaOption[];
   casas: CasaOption[];
-  actionImportar: (items: any[]) => Promise<{ ok: boolean; importados?: number; error?: string }>;
+  actionImportar: (
+    items: ElementoImportacion[],
+  ) => Promise<{ ok: boolean; importados?: number; error?: string }>;
 }) {
   const router = useRouter();
   const fileInputRef = React.useRef<HTMLInputElement>(null);

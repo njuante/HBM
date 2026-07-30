@@ -127,14 +127,6 @@ export function PresupuestosClient({
             icon={PiggyBank}
             titulo="Sin presupuestos este mes"
             descripcion="Pon un límite a una categoría y sabrás en cualquier momento cuánto te queda."
-            accion={
-              puedeGestionar && (
-                <Button size="sm" onClick={() => setCreando(true)}>
-                  <Plus />
-                  Nuevo presupuesto
-                </Button>
-              )
-            }
           />
         ) : (
           <ul className="divide-y divide-border">
@@ -276,7 +268,7 @@ function FilaPresupuesto({
                 variant="ghost"
                 size="icon-sm"
                 aria-label={`Acciones de ${nombre}`}
-                className="shrink-0 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
+                className="shrink-0 accion-fila"
               >
                 <MoreHorizontal />
               </Button>

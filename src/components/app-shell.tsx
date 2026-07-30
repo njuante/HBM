@@ -13,7 +13,6 @@ import {
   FolderPlus,
   KeyRound,
   Settings,
-  Menu,
   PiggyBank,
   ReceiptText,
   Search,
@@ -38,6 +37,7 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PaletaComandos } from "@/components/paleta-comandos";
 import { useAtajos } from "@/components/use-atajos";
+import { useModTecla } from "@/components/use-mod-tecla";
 import { Kbd } from "@/components/ui/dialog";
 import { cambiarFamilia, logout } from "@/server/auth/actions";
 
@@ -95,8 +95,11 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const [paleta, setPaleta] = React.useState(false);
+  // El cajón vive aquí porque en móvil lo abre la barra inferior, no la cabecera.
+  const [cajon, setCajon] = React.useState(false);
   const abrirPaleta = React.useCallback(() => setPaleta(true), []);
   useAtajos(abrirPaleta);
+  const atajoBuscar = `${useModTecla()}K`;
 
   const ajustes = React.useMemo(
     () => ajustesPara(alquileresActivo),
@@ -105,13 +108,17 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen flex-1 flex-col pb-16 lg:pb-0">
-      <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/65">
+      {/* El relleno superior deja hueco a la barra de estado del iPhone, que
+          con `black-translucent` se dibuja encima del contenido. */}
+      <header className="sticky top-0 z-40 border-b border-border bg-background/80 pt-[env(safe-area-inset-top)] backdrop-blur-md supports-[backdrop-filter]:bg-background/65">
         <div className="mx-auto flex h-14 w-full max-w-[1180px] items-center gap-3 px-4 sm:px-6">
           <NavMovil
             nav={NAV}
             ajustes={ajustes}
             pathname={pathname}
             familiaNombre={familiaNombre}
+            abierto={cajon}
+            onOpenChange={setCajon}
           />
 
           <Link
@@ -129,6 +136,16 @@ export function AppShell({
           <NavPestanas nav={NAV} pathname={pathname} />
 
           <div className="ml-auto flex shrink-0 items-center gap-0.5">
+            {/* En móvil solo la lupa: el rótulo y el atajo no caben ni sirven. */}
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={abrirPaleta}
+              aria-label="Buscar"
+              className="sm:hidden"
+            >
+              <Search />
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -137,7 +154,7 @@ export function AppShell({
             >
               <Search />
               Buscar
-              <Kbd>⌘K</Kbd>
+              <Kbd>{atajoBuscar}</Kbd>
             </Button>
             <MenuAjustes ajustes={ajustes} pathname={pathname} />
             <ThemeToggle />
@@ -155,7 +172,7 @@ export function AppShell({
         {children}
       </main>
 
-      <BottomNav />
+      <BottomNav onMas={() => setCajon(true)} />
 
       <PaletaComandos
         abierta={paleta}
@@ -232,32 +249,31 @@ function NavPestanas({ nav, pathname }: { nav: NavItem[]; pathname: string }) {
   );
 }
 
-/** Cajón lateral en pantallas estrechas. Sustituye a la tira horizontal. */
+/**
+ * Cajón lateral en pantallas estrechas. Sustituye a la tira horizontal.
+ *
+ * No tiene disparador propio: lo abre «Más» en la barra inferior. Tenerlo
+ * también en la cabecera dejaba dos navegaciones a la vez en móvil.
+ */
 function NavMovil({
   nav,
   ajustes,
   pathname,
   familiaNombre,
+  abierto,
+  onOpenChange,
 }: {
   nav: NavItem[];
   ajustes: NavItem[];
   pathname: string;
   familiaNombre: string;
+  abierto: boolean;
+  onOpenChange: (v: boolean) => void;
 }) {
-  const [abierto, setAbierto] = React.useState(false);
+  const setAbierto = onOpenChange;
 
   return (
-    <DialogPrimitive.Root open={abierto} onOpenChange={setAbierto}>
-      <DialogPrimitive.Trigger asChild>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Abrir menú"
-          className="-ml-1.5 lg:hidden"
-        >
-          <Menu />
-        </Button>
-      </DialogPrimitive.Trigger>
+    <DialogPrimitive.Root open={abierto} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-background/70 backdrop-blur-[2px] data-[state=closed]:animate-overlay-out data-[state=open]:animate-overlay-in" />
         <DialogPrimitive.Content className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-card p-3 shadow-lg focus:outline-none data-[state=closed]:animate-sheet-out data-[state=open]:animate-sheet-in">

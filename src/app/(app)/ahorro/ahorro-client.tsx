@@ -7,7 +7,6 @@ import {
   Target,
   Trophy,
   Calendar,
-  Sparkles,
   ArrowUpRight,
   ArrowDownRight,
   Trash2,
@@ -17,7 +16,8 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { FormError } from "@/components/ui/field";
+import { EmptyState } from "@/components/ui/empty-state";
 import { formatEUR } from "@/lib/money";
 import { formatFecha } from "@/lib/format";
 import { useToast } from "@/components/ui/toast";
@@ -104,18 +104,13 @@ export function AhorroClient({ resumen }: { resumen: ResumenAhorroGlobal }) {
 
       {/* GRID DE PARCELAS / METAS DE AHORRO */}
       {resumen.metas.length === 0 ? (
-        <Card className="p-8 text-center space-y-3">
-          <div className="size-12 rounded-full bg-primary/10 text-primary mx-auto flex items-center justify-center">
-            <PiggyBank className="size-6" />
-          </div>
-          <h3 className="font-semibold text-base">Aún no tienes metas de ahorro</h3>
-          <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-            Crea tu primera hucha para un viaje, un ordenador nuevo, o tu fondo de emergencia e ve añadiendo dinero poco a poco.
-          </p>
-          <Button size="sm" onClick={() => setCreando(true)}>
-            <Plus />
-            Crear primera meta
-          </Button>
+        // El mismo estado vacío que el resto de la app, en vez de uno propio.
+        <Card>
+          <EmptyState
+            icon={PiggyBank}
+            titulo="Aún no tienes metas de ahorro"
+            descripcion="Una hucha para un viaje, un ordenador nuevo o el fondo de emergencia. Créala con «Nueva Meta de Ahorro» ahí arriba y ve echando dinero poco a poco."
+          />
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -189,7 +184,8 @@ function TarjetaMeta({
           <Button
             variant="ghost"
             size="icon-sm"
-            className="text-muted-foreground hover:text-red-500 shrink-0"
+            aria-label={`Eliminar «${meta.nombre}»`}
+            className="shrink-0 text-muted-foreground hover:text-danger"
             onClick={() => setBorrando(true)}
           >
             <Trash2 className="size-3.5" />
@@ -282,6 +278,7 @@ function CrearMetaDialog({
 }) {
   const { avisar } = useToast();
   const [color, setColor] = React.useState(COLORES_META[0].hex);
+  const [error, setError] = React.useState<string | undefined>();
 
   return (
     <Dialog open={abierto} onOpenChange={onOpenChange}>
@@ -292,16 +289,22 @@ function CrearMetaDialog({
 
         <form
           action={async (fd) => {
+            setError(undefined);
             const res = await crearMetaAction(fd);
             if (res.ok) {
               avisar("Meta de ahorro creada con éxito");
               onOpenChange(false);
+            } else {
+              // Sin esto el diálogo se quedaba quieto y parecía que no hacía nada.
+              setError(res.error ?? "No se ha podido crear la meta.");
             }
           }}
         >
           <input type="hidden" name="color" value={color} />
 
           <DialogBody className="space-y-4">
+            <FormError>{error}</FormError>
+
             <div>
               <label htmlFor="meta-nombre" className="block text-xs font-medium text-muted-foreground mb-1">
                 ¿Para qué quieres ahorrar?
@@ -399,6 +402,7 @@ function AportarDineroDialog({
   const { avisar } = useToast();
   const [importe, setImporte] = React.useState("");
   const [notas, setNotas] = React.useState("");
+  const [error, setError] = React.useState<string | undefined>();
 
   const esAportar = tipo === "APORTAR";
 
@@ -414,18 +418,26 @@ function AportarDineroDialog({
         <form
           onSubmit={async (e) => {
             e.preventDefault();
+            setError(undefined);
             const val = Number(importe);
-            if (!val || val <= 0) return;
+            if (!val || val <= 0) {
+              setError("Escribe un importe mayor que 0.");
+              return;
+            }
             const finalImporte = esAportar ? val : -val;
 
             const res = await aportarMetaAction(meta.id, finalImporte, notas);
             if (res.ok) {
               avisar(esAportar ? `+${val} € aportados a ${meta.nombre}` : `-${val} € retirados de ${meta.nombre}`);
               onOpenChange(false);
+            } else {
+              setError(res.error ?? "No se ha podido registrar el movimiento.");
             }
           }}
         >
           <DialogBody className="space-y-3">
+            <FormError>{error}</FormError>
+
             <div className="bg-muted/30 p-3 rounded-lg text-xs space-y-1">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Ahorrado actualmente:</span>

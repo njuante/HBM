@@ -1,6 +1,10 @@
 import { cn } from "@/lib/utils";
 
-export type LeyendaItem = { label: string; color: string; forma?: "barra" | "linea" };
+export type LeyendaItem = {
+  label: string;
+  color: string;
+  forma?: "barra" | "linea";
+};
 
 /**
  * Marco común de toda gráfica: título, leyenda propia y la tabla
@@ -59,9 +63,7 @@ export function ChartFrame({
                     aria-hidden
                     className={cn(
                       "inline-block shrink-0",
-                      l.forma === "linea"
-                        ? "h-px w-3.5"
-                        : "size-2 rounded-xs",
+                      l.forma === "linea" ? "h-px w-3.5" : "size-2 rounded-xs",
                     )}
                     style={{ backgroundColor: l.color }}
                   />
@@ -74,32 +76,41 @@ export function ChartFrame({
         </div>
       </header>
 
-      <div className="min-w-0 flex-1 px-2 pb-3" role="img" aria-label={descripcion}>
+      <div
+        className="min-w-0 flex-1 px-2 pb-3"
+        role="img"
+        aria-label={descripcion}
+      >
         {children}
       </div>
 
+      {/* El envoltorio es lo que recorta: sobre la propia <table>, `.sr-only`
+          no basta —el <caption> se ensancha con su texto y arrastraba a la
+          tabla, desbordando la página a lo ancho en móvil. */}
       {tabla && (
-        <table className="sr-only">
-          <caption>{descripcion}</caption>
-          <thead>
-            <tr>
-              {tabla.cabeceras.map((c) => (
-                <th key={c} scope="col">
-                  {c}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {tabla.filas.map((f, i) => (
-              <tr key={i}>
-                {f.map((celda, j) => (
-                  <td key={j}>{celda}</td>
+        <div className="sr-only">
+          <table>
+            <caption>{descripcion}</caption>
+            <thead>
+              <tr>
+                {tabla.cabeceras.map((c) => (
+                  <th key={c} scope="col">
+                    {c}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {tabla.filas.map((f, i) => (
+                <tr key={i}>
+                  {f.map((celda, j) => (
+                    <td key={j}>{celda}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   );

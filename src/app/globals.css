@@ -4,8 +4,18 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ══════════════════════════════════════════════════════════════════════
-   1. Escala cruda — «Grafito y ámbar»
-   Neutros cálidos (papel), acento ámbar quemado y semánticos desaturados.
+   1. Escala cruda — «Papel y petróleo»
+   Neutros cálidos (papel) y un único acento frío: petróleo entintado.
+
+   El acento era ámbar y se ha retirado a propósito. Sobre un papel cálido,
+   un acento cálido no se despega del fondo: chocaba con el ocre de
+   `--warning` y con el ámbar de `--chart-1`, y toda la interfaz acababa
+   lavada de naranja. Tinta fría sobre papel cálido es lo que hace un
+   libro de cuentas: el color señala, no decora.
+
+   Los semánticos de dinero —oliva entra, teja sale— se quedan como
+   estaban, y ahora son los únicos que llevan calor.
+
    Estos valores no se usan directamente en componentes: solo alimentan
    la capa semántica de abajo.
    ══════════════════════════════════════════════════════════════════════ */
@@ -24,9 +34,15 @@
   --stone-900: #1c1b19;
   --stone-950: #0a0a0b;
 
-  /* Ámbar quemado — el único acento del sistema */
+  /* Petróleo entintado — el único acento del sistema */
+  --petrol-700: #14454d;
+  --petrol-600: #1b5a63;
+  --petrol-500: #24717c;
+  --petrol-400: #4f9aa6;
+
+  /* Ámbar: ya no es el acento. Sigue vivo porque es el primer color de las
+     gráficas, donde el rango cálido sí manda. */
   --amber-600: #a85b22;
-  --amber-500: #c07028;
   --amber-400: #d98a45;
 
   /* Semánticos financieros: oliva (entra) / teja (sale). Nunca semáforo. */
@@ -60,10 +76,10 @@
   --border-strong: var(--stone-300);
   --input: var(--stone-300);
 
-  --ring: var(--amber-600);
-  --primary: var(--amber-600);
-  --primary-foreground: #fffdf9;
-  --primary-soft: color-mix(in oklab, var(--amber-600) 10%, transparent);
+  --ring: var(--petrol-600);
+  --primary: var(--petrol-600);
+  --primary-foreground: #f6fbfb;
+  --primary-soft: color-mix(in oklab, var(--petrol-600) 10%, transparent);
 
   --success: var(--olive-600);
   --success-foreground: #fbfdf9;
@@ -94,10 +110,10 @@
   --border-strong: #34343a;
   --input: #2a2a2e;
 
-  --ring: var(--amber-400);
-  --primary: var(--amber-400);
-  --primary-foreground: #17110a;
-  --primary-soft: color-mix(in oklab, var(--amber-400) 16%, transparent);
+  --ring: var(--petrol-400);
+  --primary: var(--petrol-400);
+  --primary-foreground: #06181b;
+  --primary-soft: color-mix(in oklab, var(--petrol-400) 16%, transparent);
 
   --success: var(--olive-400);
   --success-foreground: #0d1409;
@@ -118,7 +134,7 @@
 :root {
   --chart-1: #a85b22; /* ámbar     26° */
   --chart-2: #4a6b3d; /* oliva    100° */
-  --chart-3: #26606b; /* teal     192° */
+  --chart-3: #35678a; /* acero    210° — separado del petróleo del acento */
   --chart-4: #8e3b5c; /* vino     335° */
   --chart-5: #86691e; /* ocre      48° */
   --chart-6: #4c4a7c; /* índigo   245° */
@@ -131,7 +147,7 @@
 .dark {
   --chart-1: #d98a45;
   --chart-2: #86a96f;
-  --chart-3: #5fa8b8;
+  --chart-3: #7cb0d6;
   --chart-4: #d4788f;
   --chart-5: #c4a24a;
   --chart-6: #8a87c4;
@@ -291,6 +307,43 @@ body {
   font-size: var(--text-base);
   font-feature-settings: "cv05" 1, "ss01" 1;
   -webkit-font-smoothing: antialiased;
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   Campos en táctil
+   Safari en iOS amplía la página al enfocar cualquier campo cuyo texto
+   mida menos de 16px, y toda la escala de la app está por debajo. Se
+   sube solo donde el puntero es grueso: en escritorio la densidad se
+   mantiene intacta.
+   ────────────────────────────────────────────────────────────────── */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   Acciones de fila
+   Se atenúan hasta el hover para que la tabla no sea un muro de iconos,
+   pero SOLO donde hay un puntero capaz de hacer hover. En táctil no lo
+   hay: ocultarlas allí dejaba editar y borrar fuera de alcance.
+   ────────────────────────────────────────────────────────────────── */
+.accion-fila {
+  transition: opacity 150ms;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .accion-fila {
+    opacity: 0;
+  }
+
+  .group:hover .accion-fila,
+  .accion-fila:focus-visible,
+  .accion-fila[data-state="open"] {
+    opacity: 1;
+  }
 }
 
 /* Toda cifra monetaria alinea en columna */

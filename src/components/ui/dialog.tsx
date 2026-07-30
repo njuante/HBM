@@ -38,7 +38,9 @@ export const DialogContent = React.forwardRef<
       ref={ref}
       className={cn(
         "fixed left-1/2 top-1/2 z-50 w-[calc(100vw-1.5rem)] max-w-lg",
-        "-translate-x-1/2 -translate-y-1/2 max-h-[90vh] overflow-hidden flex flex-col",
+        // `dvh` y no `vh`: con el teclado abierto en móvil, `vh` sigue
+        // midiendo la pantalla entera y el diálogo se sale por abajo.
+        "-translate-x-1/2 -translate-y-1/2 max-h-[90dvh] overflow-hidden flex flex-col",
         "rounded-2xl sm:rounded-xl border border-border bg-card shadow-lg",
         "focus:outline-none",
         "data-[state=open]:animate-panel-in data-[state=closed]:animate-panel-out",
@@ -79,7 +81,7 @@ export function DialogBody({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("max-h-[70vh] overflow-y-auto px-5 py-4", className)}
+      className={cn("max-h-[70dvh] overflow-y-auto px-5 py-4", className)}
       {...props}
     />
   );

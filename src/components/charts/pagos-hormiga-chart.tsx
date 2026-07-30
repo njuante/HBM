@@ -1,9 +1,8 @@
 "use client";
 
 import React from "react";
-import { Bug, TrendingUp, AlertCircle, Sparkles, RefreshCw } from "lucide-react";
+import { Bug, TrendingUp, Sparkles } from "lucide-react";
 import { formatEUR } from "@/lib/money";
-import { cn } from "@/lib/utils";
 import type { ResumenPagosHormiga } from "@/server/db/pagos-hormiga";
 import { ChartFrame } from "./chart-frame";
 

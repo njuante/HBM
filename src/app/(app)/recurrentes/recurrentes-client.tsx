@@ -178,14 +178,6 @@ export function RecurrentesClient({
                     ? "El alquiler, la cuota del gimnasio o la factura de la luz se apuntan una vez y se repiten solas."
                     : "La nómina o el alquiler que cobras entran solos cada mes."
                 }
-                accion={
-                  puedeGestionar && (
-                    <Button size="sm" onClick={() => setCreando(true)}>
-                      <Plus />
-                      Nueva recurrencia
-                    </Button>
-                  )
-                }
               />
             ) : (
               <TableWrap>
@@ -310,7 +302,7 @@ function FilaRecurrencia({
                   variant="ghost"
                   size="icon-sm"
                   aria-label={`Acciones de ${r.concepto}`}
-                  className="opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
+                  className="accion-fila"
                 >
                   <MoreHorizontal />
                 </Button>

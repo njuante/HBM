@@ -94,14 +94,6 @@ export function AlquileresClient({
             icon={KeyRound}
             titulo="Todavía no hay contratos"
             descripcion="Crea uno con la casa, el inquilino y la renta. Después podrás darle acceso a su panel y compartirle facturas."
-            accion={
-              puedeGestionar && (
-                <Button size="sm" onClick={() => setCreando(true)}>
-                  <Plus />
-                  Nuevo contrato
-                </Button>
-              )
-            }
           />
         </Card>
       ) : (
@@ -229,7 +221,7 @@ function FilaContrato({
                   variant="ghost"
                   size="icon-sm"
                   aria-label={`Acciones de ${c.casa.nombre}`}
-                  className="opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
+                  className="accion-fila"
                 >
                   <MoreHorizontal />
                 </Button>

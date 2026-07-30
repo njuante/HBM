@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
-  ExternalLink,
   EyeOff,
   FileText,
   Image as ImageIcon,
@@ -165,14 +164,6 @@ export function FacturasClient({
               hayFiltros
                 ? "Prueba con otro estado o vacía la búsqueda."
                 : "Sube el PDF o la foto de una factura y HBM te avisará antes de que venza."
-            }
-            accion={
-              !hayFiltros && (
-                <Button size="sm" onClick={() => setSubiendo(true)}>
-                  <Upload />
-                  Subir factura
-                </Button>
-              )
             }
           />
         ) : (
@@ -357,7 +348,7 @@ function Fila({
               variant="ghost"
               size="icon-sm"
               aria-label={`Acciones de ${nombre}`}
-              className="opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
+              className="accion-fila"
             >
               <MoreHorizontal />
             </Button>
@@ -367,16 +358,8 @@ function Fila({
               <Pencil />
               Editar
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <a
-                href={`/api/facturas/${f.id}/archivo`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <ExternalLink />
-                Abrir archivo
-              </a>
-            </DropdownMenuItem>
+            {/* «Abrir archivo» no se repite aquí: la propia fila ya tiene su
+                enlace, siempre visible, en la primera columna. */}
             {compartible && f.casaEnAlquiler && (
               <DropdownMenuItem asChild>
                 <form action={compartirFacturaAction}>

@@ -27,13 +27,16 @@ const buttonVariants = cva(
           "bg-danger text-danger-foreground hover:bg-danger/90 active:bg-danger/95",
         link: "h-auto p-0 text-foreground underline decoration-border-strong underline-offset-4 hover:decoration-foreground",
       },
+      /* Las alturas son de escritorio. En táctil todo sube a 44px (mínimo
+         de las guías de iOS y Android) sin tocar la densidad del ratón:
+         los iconos crecen en caja, no en dibujo. */
       size: {
-        xs: "h-7 px-2 text-xs [&_svg]:size-3.5",
-        sm: "h-8 px-2.5",
-        md: "h-9 px-3.5",
-        lg: "h-10 px-5",
-        icon: "size-9",
-        "icon-sm": "size-8 [&_svg]:size-3.5",
+        xs: "h-7 px-2 text-xs pointer-coarse:h-11 [&_svg]:size-3.5",
+        sm: "h-8 px-2.5 pointer-coarse:h-11",
+        md: "h-9 px-3.5 pointer-coarse:h-11",
+        lg: "h-10 px-5 pointer-coarse:h-11",
+        icon: "size-9 pointer-coarse:size-11",
+        "icon-sm": "size-8 pointer-coarse:size-11 [&_svg]:size-3.5",
       },
     },
     defaultVariants: { variant: "primary", size: "md" },

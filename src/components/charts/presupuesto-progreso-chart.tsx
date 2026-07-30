@@ -22,17 +22,17 @@ export function PresupuestoProgresoChart({
   // Determinar color de salud presupuestaria
   const tonoColor =
     porcentajeTotal >= 100
-      ? "text-red-500 bg-red-500/10 border-red-500/20"
+      ? "text-danger bg-danger/10 border-danger/20"
       : porcentajeTotal >= 85
-        ? "text-amber-500 bg-amber-500/10 border-amber-500/20"
-        : "text-emerald-500 bg-emerald-500/10 border-emerald-500/20";
+        ? "text-warning bg-warning/10 border-warning/20"
+        : "text-success bg-success/10 border-success/20";
 
   const barColor =
     porcentajeTotal >= 100
-      ? "bg-red-500"
+      ? "bg-danger"
       : porcentajeTotal >= 85
-        ? "bg-amber-500"
-        : "bg-emerald-500";
+        ? "bg-warning"
+        : "bg-success";
 
   return (
     <ChartFrame
@@ -77,7 +77,7 @@ export function PresupuestoProgresoChart({
               <span>Gastado: {formatEUR(gastadoTotal)}</span>
               <span>
                 {porcentajeTotal >= 100 ? (
-                  <span className="text-red-500 font-medium">Excedido en {formatEUR(gastadoTotal - limiteTotal)}</span>
+                  <span className="text-danger font-medium">Excedido en {formatEUR(gastadoTotal - limiteTotal)}</span>
                 ) : (
                   <span>Quedan: {formatEUR(restanteTotal)}</span>
                 )}
@@ -100,9 +100,9 @@ export function PresupuestoProgresoChart({
                 const esAviso = pct >= 85 && pct < 100;
 
                 const colorBarra = esExcedido
-                  ? "bg-red-500"
+                  ? "bg-danger"
                   : esAviso
-                    ? "bg-amber-500"
+                    ? "bg-warning"
                     : "bg-primary";
 
                 const nombreCat = p.categoria?.nombre ?? p.casa?.nombre ?? "Presupuesto General";
@@ -112,11 +112,11 @@ export function PresupuestoProgresoChart({
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-medium text-foreground flex items-center gap-1.5 truncate max-w-[65%]">
                         {esExcedido ? (
-                          <AlertTriangle className="size-3.5 text-red-500 shrink-0" />
+                          <AlertTriangle className="size-3.5 text-danger shrink-0" />
                         ) : esAviso ? (
-                          <AlertTriangle className="size-3.5 text-amber-500 shrink-0" />
+                          <AlertTriangle className="size-3.5 text-warning shrink-0" />
                         ) : (
-                          <CheckCircle2 className="size-3.5 text-emerald-500/80 shrink-0" />
+                          <CheckCircle2 className="size-3.5 text-success/80 shrink-0" />
                         )}
                         <span className="truncate">{nombreCat}</span>
                       </span>

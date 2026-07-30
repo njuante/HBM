@@ -72,14 +72,6 @@ export function CasasClient({
             icon={House}
             titulo="Aún no hay casas"
             descripcion="Cada gasto se asigna a una vivienda. Crea la primera para empezar a registrar movimientos."
-            accion={
-              puedeGestionar && (
-                <Button size="sm" onClick={() => setCreando(true)}>
-                  <Plus />
-                  Añadir casa
-                </Button>
-              )
-            }
           />
         </Card>
       ) : (
