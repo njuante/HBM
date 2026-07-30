@@ -137,7 +137,7 @@ Secretos (Settings → Secrets and variables → Actions):
 | `SSH_HOST`         | IP pública de la instancia                                   |
 | `SSH_USER`         | Usuario de acceso (`ubuntu` o `opc` según la imagen)          |
 | `SSH_KEY`          | Clave **privada** de despliegue, entera                       |
-| `SSH_KNOWN_HOSTS`  | Salida de `ssh-keyscan <IP>`, para no aceptar a ciegas al host |
+| `SSH_KNOWN_HOSTS`  | *Opcional.* Salida de `ssh-keyscan <IP>`. Si no está, la primera conexión acepta la huella que responda y la ancla a partir de ahí |
 
 Variables opcionales: `DEPLOY_PATH` (por defecto `/www/apps/hbm`) y `DOMAIN`.
 
@@ -150,8 +150,14 @@ ssh-copy-id -i ~/.ssh/hbm_deploy.pub usuario@IP
 gh secret set SSH_KEY < ~/.ssh/hbm_deploy
 gh secret set SSH_HOST --body "IP"
 gh secret set SSH_USER --body "ubuntu"
+# Opcional pero recomendable: fija la huella del servidor de antemano.
 gh secret set SSH_KNOWN_HOSTS --body "$(ssh-keyscan IP 2>/dev/null)"
 ```
+
+Sin `SSH_KNOWN_HOSTS` el despliegue funciona igual, pero esa primera conexión confía en quien
+conteste. En una red que no controlas, alguien en medio podría hacerse pasar por el servidor y
+quedarse con la clave de despliegue. Una vez anclada la huella, los despliegues siguientes ya
+detectarían el cambio.
 
 ### Volver atrás
 

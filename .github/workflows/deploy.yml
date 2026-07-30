@@ -78,13 +78,15 @@ jobs:
           SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
         run: |
           faltan=()
-          [ -n "$SSH_HOST" ]        || faltan+=(SSH_HOST)
-          [ -n "$SSH_USER" ]        || faltan+=(SSH_USER)
-          [ -n "$SSH_KEY" ]         || faltan+=(SSH_KEY)
-          [ -n "$SSH_KNOWN_HOSTS" ] || faltan+=(SSH_KNOWN_HOSTS)
+          [ -n "$SSH_HOST" ] || faltan+=(SSH_HOST)
+          [ -n "$SSH_USER" ] || faltan+=(SSH_USER)
+          [ -n "$SSH_KEY" ]  || faltan+=(SSH_KEY)
           if [ ${#faltan[@]} -gt 0 ]; then
             echo "::error::Faltan estos secretos: ${faltan[*]}. Cómo darlos de alta, en el README (sección «Configurar GitHub»)."
             exit 1
+          fi
+          if [ -z "$SSH_KNOWN_HOSTS" ]; then
+            echo "::warning::Sin SSH_KNOWN_HOSTS: se acepta la huella que responda en la primera conexión. Ver README."
           fi
 
       - name: Preparar SSH
@@ -95,10 +97,26 @@ jobs:
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
-          # La huella del servidor se fija como secreto en vez de aceptar la
-          # primera que llegue: si no, un intermediario podría suplantarlo.
-          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          chmod 644 ~/.ssh/known_hosts
+
+          # Con SSH_KNOWN_HOSTS se fija la huella del servidor de antemano y
+          # nadie puede colarse en medio. Sin él se acepta la primera que
+          # responda (`accept-new`), que es cómodo pero confía a ciegas en esa
+          # primera conexión; a partir de ahí sí queda anclada.
+          if [ -n "$SSH_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+            chmod 644 ~/.ssh/known_hosts
+          fi
+          if [ -n "$SSH_KNOWN_HOSTS" ]; then
+            politica=yes
+          else
+            politica=accept-new
+          fi
+          cat > ~/.ssh/config <<CONF
+          Host *
+            StrictHostKeyChecking $politica
+            UserKnownHostsFile ~/.ssh/known_hosts
+          CONF
+          chmod 600 ~/.ssh/config
 
       - name: Copiar compose y Caddyfile
         env:
