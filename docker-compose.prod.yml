@@ -44,8 +44,13 @@ services:
     # Solo al loopback: así el nginx de aaPanel puede llegar a la app, pero
     # nadie desde fuera. Si Caddy toma el mando, también la alcanza por la red
     # interna de compose.
+    #
+    # El puerto del anfitrión se puede cambiar con APP_PORT en el .env: en un
+    # servidor con panel el 3000 suele estar cogido. Dentro del contenedor la
+    # app siempre escucha en el 3000, así que solo cambia el lado de fuera —y
+    # con él, el destino del proxy inverso.
     ports:
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
 
   # Caddy es opcional y está apagado por defecto, porque en este servidor manda
   # aaPanel y su nginx ya ocupa el 80 y el 443. Para que Caddy lleve el TLS en

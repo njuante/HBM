@@ -75,7 +75,8 @@ Hay dos formas de poner ese proxy, y en este servidor manda aaPanel:
 En aaPanel: **Website → Add site** con el dominio `nucahome.me`, y dentro del sitio:
 
 1. **SSL → Let's Encrypt** para emitir el certificado, y activa *Force HTTPS*.
-2. **Reverse proxy → Add**, destino `http://127.0.0.1:3000`.
+2. **Reverse proxy → Add**, destino `http://127.0.0.1:3000` (o el puerto que hayas puesto en
+   `APP_PORT`, ver más abajo).
 3. Comprueba que la configuración incluye estas cabeceras — aaPanel no siempre pone la de
    `X-Forwarded-Proto`, y sin ella la app no sabe que va por HTTPS:
 
@@ -127,6 +128,14 @@ En aaPanel: **Website → Add site** con el dominio `nucahome.me`, y dentro del 
    # `@`, `:` o `/` la partiría en dos al interpretarse la URL.
    printf 'POSTGRES_PASSWORD=%s\nDOMAIN=nucahome.me\n' "$(openssl rand -hex 32)" > .env
    chmod 600 .env
+   ```
+
+   Si el 3000 ya está ocupado en la máquina —con un panel instalado pasa a menudo— el arranque
+   falla con `address already in use`. Mira quién lo tiene y, si no lo puedes liberar, usa otro:
+
+   ```bash
+   sudo ss -lptn 'sport = :3000'
+   echo 'APP_PORT=3001' >> /www/apps/hbm/.env   # y apunta ahí el proxy inverso
    ```
 
 5. **El paquete de GHCR ya es público**, así que el servidor descarga la imagen sin credenciales.
