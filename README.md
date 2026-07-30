@@ -75,8 +75,7 @@ Hay dos formas de poner ese proxy, y en este servidor manda aaPanel:
 En aaPanel: **Website → Add site** con el dominio `nucahome.me`, y dentro del sitio:
 
 1. **SSL → Let's Encrypt** para emitir el certificado, y activa *Force HTTPS*.
-2. **Reverse proxy → Add**, destino `http://127.0.0.1:3000` (o el puerto que hayas puesto en
-   `APP_PORT`, ver más abajo).
+2. **Reverse proxy → Add**, destino `http://127.0.0.1:33000` (o el que hayas puesto en `APP_PORT`).
 3. Comprueba que la configuración incluye estas cabeceras — aaPanel no siempre pone la de
    `X-Forwarded-Proto`, y sin ella la app no sabe que va por HTTPS:
 
@@ -130,12 +129,12 @@ En aaPanel: **Website → Add site** con el dominio `nucahome.me`, y dentro del 
    chmod 600 .env
    ```
 
-   Si el 3000 ya está ocupado en la máquina —con un panel instalado pasa a menudo— el arranque
-   falla con `address already in use`. Mira quién lo tiene y, si no lo puedes liberar, usa otro:
+   La app se publica en el **33000** del anfitrión, porque en esta máquina el 3000 estaba cogido.
+   Para usar otro, `APP_PORT` en el `.env` manda — y hay que apuntar ahí el proxy inverso:
 
    ```bash
-   sudo ss -lptn 'sport = :3000'
-   echo 'APP_PORT=3001' >> /www/apps/hbm/.env   # y apunta ahí el proxy inverso
+   sudo ss -lptn 'sport = :33000'          # comprobar que está libre
+   echo 'APP_PORT=3500' >> /www/apps/hbm/.env
    ```
 
 5. **El paquete de GHCR ya es público**, así que el servidor descarga la imagen sin credenciales.
