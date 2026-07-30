@@ -114,8 +114,17 @@ test("el inquilino solo ve su panel y las facturas que le comparten", async ({
   await expect(pageInq.getByText("Reforma")).toHaveCount(0);
 
   // Declarar el pago no la marca como pagada: lo confirma el propietario.
+  //
+  // Se espera a que la página termine de asentarse antes de pulsar: si el clic
+  // cae justo mientras React hidrata el formulario, el envío se queda por el
+  // camino. Y el margen de la comprobación es amplio porque entre el clic y el
+  // cambio del distintivo hay una acción de servidor y una revalidación, que en
+  // un runner cargado no siempre caben en los cinco segundos por defecto.
+  await pageInq.waitForLoadState("networkidle").catch(() => {});
   await pageInq.getByRole("button", { name: /ya lo he pagado/i }).click();
-  await expect(pageInq.getByText(/pago avisado/i)).toBeVisible();
+  await expect(pageInq.getByText(/pago avisado/i)).toBeVisible({
+    timeout: 15_000,
+  });
 
   // Y no llega a ninguna ruta de la familia.
   for (const ruta of ["/dashboard", "/gastos", "/facturas", "/alquileres"]) {
