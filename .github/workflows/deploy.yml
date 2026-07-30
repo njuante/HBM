@@ -150,7 +150,14 @@ jobs:
           DESTINO: ${{ vars.DEPLOY_PATH || '/www/apps/hbm' }}
           REMOTO_SSH: ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
         run: |
-          ssh -i ~/.ssh/id_deploy "$REMOTO_SSH" "mkdir -p '$DESTINO'"
+          # La carpeta no se crea desde aquí: en un servidor con aaPanel /www es
+          # de root, así que un `mkdir` con el usuario de despliegue fallaría.
+          # Se prepara una vez a mano, con su dueño correcto (ver README).
+          if ! ssh -i ~/.ssh/id_deploy "$REMOTO_SSH" "[ -w '$DESTINO' ]"; then
+            echo "::error::$DESTINO no existe o no es escribible por este usuario. Prepárala una vez con:"
+            echo "  sudo mkdir -p $DESTINO && sudo chown -R \$USER:\$USER $DESTINO"
+            exit 1
+          fi
           scp -i ~/.ssh/id_deploy docker-compose.prod.yml Caddyfile \
             "$REMOTO_SSH:$DESTINO/"
 

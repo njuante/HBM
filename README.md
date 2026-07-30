@@ -115,10 +115,14 @@ En aaPanel: **Website → Add site** con el dominio `nucahome.me`, y dentro del 
 3. **Docker**, si no está: `curl -fsSL https://get.docker.com | sh` y
    `sudo usermod -aG docker $USER`.
 
-4. **El `.env`**, que vive solo en el servidor y nunca en git:
+4. **La carpeta del despliegue y su `.env`.** En un servidor con aaPanel `/www` es de root, así que
+   hay que crearla y cederle la propiedad al usuario con el que entra GitHub Actions — si no, el
+   `scp` del workflow no podrá escribir ahí. El `.env` vive solo en el servidor, nunca en git:
 
    ```bash
-   sudo mkdir -p /www/apps/hbm && cd /www/apps/hbm
+   sudo mkdir -p /www/apps/hbm
+   sudo chown -R $USER:$USER /www/apps/hbm
+   cd /www/apps/hbm
    # Hexadecimal a propósito: la contraseña viaja dentro de DATABASE_URL, y un
    # `@`, `:` o `/` la partiría en dos al interpretarse la URL.
    printf 'POSTGRES_PASSWORD=%s\nDOMAIN=nucahome.me\n' "$(openssl rand -hex 32)" > .env
