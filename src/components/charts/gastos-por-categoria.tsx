@@ -66,42 +66,59 @@ export function GastosPorCategoriaChart({
         ]),
       }}
     >
-      <ul className="space-y-px px-3 pb-1 pt-1">
+      <ul className="space-y-1.5 px-2 pb-1.5 pt-1.5 sm:space-y-px sm:px-3 sm:pb-1 sm:pt-1">
         {filas.map((c) => {
           const color = armonizarColor(c.color, resolvedTheme);
           const pct = (c.total / total) * 100;
           const ancho = Math.max(1.5, (c.total / mayor) * 100);
 
           const contenido = (
-            <>
-              {/* Sin icono en BD, un punto del color dice más que repetir el
-                  icono genérico en todas las filas. */}
-              <MarcaCategoria
-                icono={c.icono}
-                color={color}
-                className="size-3.5 shrink-0"
-                puntoClassName="ml-1 mr-1 size-2 shrink-0 rounded-full"
-              />
-              <span className="w-28 shrink-0 truncate text-xs font-medium sm:w-32">
-                {c.nombre}
-              </span>
-              <span className="relative h-4 min-w-0 flex-1 overflow-hidden rounded-xs bg-muted/70">
+            <div className="flex w-full flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2.5">
+              {/* Línea superior en móvil / izquierda en desktop */}
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <MarcaCategoria
+                  icono={c.icono}
+                  color={color}
+                  className="size-3.5 shrink-0"
+                  puntoClassName="ml-0.5 mr-0.5 size-2 shrink-0 rounded-full"
+                />
+                <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground sm:w-32 sm:flex-none">
+                  {c.nombre}
+                </span>
+
+                {/* Importe y porcentaje visibles a la derecha en móvil */}
+                <div className="ml-auto flex items-baseline gap-1.5 shrink-0 sm:hidden">
+                  <span className="text-xs font-semibold tabular-nums text-foreground">
+                    {formatEUR(c.total)}
+                  </span>
+                  <span className="text-2xs tabular-nums text-faint">
+                    ({pct.toFixed(0)}%)
+                  </span>
+                </div>
+              </div>
+
+              {/* Barra de progreso */}
+              <span className="relative h-2 w-full overflow-hidden rounded-full bg-muted/70 sm:h-3.5 sm:min-w-0 sm:flex-1 sm:rounded-xs">
                 <span
-                  className="absolute inset-y-0 left-0 rounded-xs transition-[width] duration-500 ease-out-quint"
+                  className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-500 ease-out-quint sm:rounded-xs"
                   style={{ width: `${ancho}%`, backgroundColor: color }}
                 />
               </span>
-              <span className="w-20 shrink-0 text-right text-xs tabular-nums">
-                {formatEUR(c.total)}
-              </span>
-              <span className="w-11 shrink-0 text-right text-2xs tabular-nums text-faint">
-                {pct.toFixed(0)} %
-              </span>
-            </>
+
+              {/* Importe y porcentaje visibles solo en desktop */}
+              <div className="hidden items-center gap-2 shrink-0 sm:flex">
+                <span className="w-20 text-right text-xs tabular-nums font-medium">
+                  {formatEUR(c.total)}
+                </span>
+                <span className="w-11 text-right text-2xs tabular-nums text-faint">
+                  {pct.toFixed(0)} %
+                </span>
+              </div>
+            </div>
           );
 
           const clases =
-            "flex items-center gap-2.5 rounded-sm px-2 py-1.5 transition-colors";
+            "block rounded-md px-2 py-2 transition-colors sm:py-1.5";
 
           return (
             <li key={c.categoriaId ?? c.nombre}>
@@ -111,12 +128,12 @@ export function GastosPorCategoriaChart({
                     pathname: "/gastos",
                     query: { categoriaId: c.categoriaId, ...(casaId ? { casaId } : {}) },
                   }}
-                  className={cn(clases, "hover:bg-muted")}
+                  className={cn(clases, "hover:bg-muted/70 bg-muted/30 sm:bg-transparent")}
                 >
                   {contenido}
                 </Link>
               ) : (
-                <div className={clases}>{contenido}</div>
+                <div className={cn(clases, "bg-muted/20 sm:bg-transparent")}>{contenido}</div>
               )}
             </li>
           );

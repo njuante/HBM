@@ -16,7 +16,7 @@ export const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-background/70 backdrop-blur-[2px]",
+      "fixed inset-0 z-50 bg-background/80 backdrop-blur-sm",
       "data-[state=open]:animate-overlay-in data-[state=closed]:animate-overlay-out",
       className,
     )}
@@ -37,11 +37,8 @@ export const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-1/2 top-1/2 z-50 w-[calc(100vw-1.5rem)] max-w-lg",
-        // `dvh` y no `vh`: con el teclado abierto en móvil, `vh` sigue
-        // midiendo la pantalla entera y el diálogo se sale por abajo.
-        "-translate-x-1/2 -translate-y-1/2 max-h-[90dvh] overflow-hidden flex flex-col",
-        "rounded-2xl sm:rounded-xl border border-border bg-card shadow-lg",
+        "fixed inset-0 z-50 m-auto h-fit max-h-[90dvh] w-[calc(100vw-1.5rem)] max-w-lg overflow-hidden flex flex-col",
+        "rounded-2xl sm:rounded-xl border border-border bg-card shadow-xl",
         "focus:outline-none",
         "data-[state=open]:animate-panel-in data-[state=closed]:animate-panel-out",
         className,

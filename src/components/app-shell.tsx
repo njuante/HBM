@@ -168,7 +168,7 @@ export function AppShell({
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-[1180px] flex-1 px-4 py-5 sm:px-6 sm:py-9">
+      <main className="mx-auto w-full max-w-[1180px] flex-1 min-w-0 overflow-x-clip px-4 py-4 sm:px-6 sm:py-9">
         {children}
       </main>
 

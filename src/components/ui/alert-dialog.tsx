@@ -40,14 +40,14 @@ export function ConfirmarAccion({
       <AlertDialogPrimitive.Portal>
         <AlertDialogPrimitive.Overlay
           className={cn(
-            "fixed inset-0 z-50 bg-background/70 backdrop-blur-[2px]",
+            "fixed inset-0 z-50 bg-background/80 backdrop-blur-sm",
             "data-[state=open]:animate-overlay-in data-[state=closed]:animate-overlay-out",
           )}
         />
         <AlertDialogPrimitive.Content
           className={cn(
-            "fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2",
-            "rounded-xl border border-border bg-card p-5 shadow-lg focus:outline-none",
+            "fixed inset-0 z-50 m-auto h-fit max-h-[90dvh] w-[calc(100vw-2rem)] max-w-sm",
+            "rounded-xl border border-border bg-card p-5 shadow-xl focus:outline-none",
             "data-[state=open]:animate-panel-in data-[state=closed]:animate-panel-out",
           )}
         >

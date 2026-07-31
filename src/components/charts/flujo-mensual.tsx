@@ -71,11 +71,11 @@ export function FlujoMensualChart({ data }: { data: PuntoMensual[] }) {
         ]),
       }}
     >
-      <ResponsiveContainer width="100%" height={264}>
+      <ResponsiveContainer width="100%" height={250}>
         <ComposedChart
           data={puntos}
-          margin={{ top: 8, right: 12, bottom: 0, left: 0 }}
-          barCategoryGap="28%"
+          margin={{ top: 8, right: 6, bottom: 0, left: -6 }}
+          barCategoryGap="18%"
         >
           <CartesianGrid
             stroke={t.grid}
@@ -84,17 +84,17 @@ export function FlujoMensualChart({ data }: { data: PuntoMensual[] }) {
           />
           <XAxis
             dataKey="etiqueta"
-            tick={{ fill: t.axis, fontSize: 11 }}
+            tick={{ fill: t.axis, fontSize: 10 }}
             tickLine={false}
             axisLine={false}
-            tickMargin={8}
+            tickMargin={6}
           />
           <YAxis
             tickFormatter={(v: number) => formatEURCompact(Math.abs(v))}
-            tick={{ fill: t.axis, fontSize: 11 }}
+            tick={{ fill: t.axis, fontSize: 10 }}
             tickLine={false}
             axisLine={false}
-            width={54}
+            width={44}
           />
           <ReferenceLine y={0} stroke={t.axis} strokeWidth={1} />
           <Tooltip

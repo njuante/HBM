@@ -42,18 +42,18 @@ export function ChartFrame({
         className,
       )}
     >
-      <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-5 pb-3 pt-4">
+      <header className="flex flex-col gap-2 px-3.5 pb-2 pt-3 min-w-0 sm:flex-row sm:items-start sm:justify-between sm:gap-x-4 sm:gap-y-2 sm:px-5 sm:pb-3 sm:pt-4">
         <div className="min-w-0">
-          <h3 className="font-serif text-base font-medium leading-tight tracking-tight">
+          <h3 className="font-serif text-sm font-medium leading-tight tracking-tight sm:text-base">
             {titulo}
           </h3>
           {subtitulo && (
             <p className="mt-0.5 text-xs text-muted-foreground">{subtitulo}</p>
           )}
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-4 min-w-0">
           {leyenda && leyenda.length > 0 && (
-            <ul className="flex flex-wrap items-center gap-3">
+            <ul className="flex flex-wrap items-center gap-2.5 sm:gap-3">
               {leyenda.map((l) => (
                 <li
                   key={l.label}
@@ -77,7 +77,7 @@ export function ChartFrame({
       </header>
 
       <div
-        className="min-w-0 flex-1 px-2 pb-3"
+        className="min-w-0 flex-1 px-1.5 pb-2.5 sm:px-2 sm:pb-3 overflow-hidden"
         role="img"
         aria-label={descripcion}
       >
