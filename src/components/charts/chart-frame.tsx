@@ -77,7 +77,7 @@ export function ChartFrame({
       </header>
 
       <div
-        className="min-w-0 flex-1 px-1.5 pb-2.5 sm:px-2 sm:pb-3 overflow-hidden"
+        className="min-w-0 flex-1 px-1.5 pb-2.5 sm:px-2 sm:pb-3 overflow-visible"
         role="img"
         aria-label={descripcion}
       >

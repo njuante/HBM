@@ -63,12 +63,12 @@ export function PagosHormigaChart({ data }: { data: ResumenPagosHormiga }) {
             {data.categorias.length > 0 ? (
               data.categorias.map((cat) => (
                 <div key={cat.id} className="space-y-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium flex items-center gap-1.5">
+                  <div className="flex items-center justify-between gap-2 text-xs min-w-0">
+                    <span className="font-medium flex items-center gap-1.5 min-w-0 flex-1 truncate">
                       <span className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
-                      {cat.nombre}
+                      <span className="truncate min-w-0">{cat.nombre}</span>
                     </span>
-                    <span className="font-mono text-2xs">
+                    <span className="font-mono text-2xs shrink-0 tabular-nums">
                       <strong>{formatEUR(cat.total)}</strong> ({cat.porcentaje}%)
                     </span>
                   </div>
