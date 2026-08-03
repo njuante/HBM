@@ -38,7 +38,11 @@ export function ChartFrame({
   return (
     <section
       className={cn(
-        "flex flex-col rounded-lg border border-border bg-card",
+        // `min-w-0`: como ítem de grid el mínimo por defecto es `auto`, o sea
+        // el min-content. Recharts fija un ancho en píxeles al SVG, así que ese
+        // min-content clavaba la tarjeta a ~348px y estiraba la columna entera
+        // más allá de la pantalla en cuanto el móvil bajaba de 364px.
+        "flex min-w-0 flex-col rounded-lg border border-border bg-card",
         className,
       )}
     >
