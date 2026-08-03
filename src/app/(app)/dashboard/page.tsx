@@ -170,7 +170,7 @@ async function PanelContenido({
 
   return (
     <>
-      <div className="mb-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
           label="Ingresos"
           valor={kpis.ingresos}
@@ -214,10 +214,15 @@ async function PanelContenido({
           />
         </Card>
       ) : (
-        <div className="grid gap-3">
+        /* `grid-cols-1` explícito y no la columna implícita: `auto` se
+           dimensiona por contenido, así que el min-content de un texto
+           `truncate` (que lleva `white-space: nowrap`) o del <svg> de Recharts
+           clavaba la columna en ~374px y el panel salía recortado en móvil.
+           `grid-cols-1` es `minmax(0, 1fr)`, que sí puede encoger. */
+        <div className="grid grid-cols-1 gap-3">
           <FlujoMensualChart data={serie} />
 
-          <div className="grid gap-3 lg:grid-cols-5">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-5">
             <div className="lg:col-span-3">
               {categorias.length > 0 ? (
                 <GastosPorCategoriaChart data={categorias} casaId={rango.casaId} />
@@ -256,7 +261,7 @@ async function PanelContenido({
 function PanelSkeleton() {
   return (
     <>
-      <div className="mb-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="rounded-lg border border-border bg-card px-4 py-3.5">
             <Skeleton className="h-2.5 w-20" />

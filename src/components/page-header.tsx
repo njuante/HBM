@@ -18,7 +18,12 @@ export function PageHeader({
         className,
       )}
     >
-      <div className="min-w-0 flex-1">
+      {/* `flex-auto` y no `flex-1`: este contenedor es `flex-wrap`, y con base 0
+          el bloque del título siempre «cabía», así que la acción se quedaba en
+          la misma línea y el <h1> se comprimía por debajo de su palabra más
+          larga —en móvil «Movimientos» salía cortado—. Con la base en el
+          contenido, si no caben los dos la acción baja de línea. */}
+      <div className="min-w-0 flex-auto">
         <h1 className="font-serif text-2xl font-medium leading-tight tracking-tight sm:text-3xl sm:leading-none">
           {title}
         </h1>

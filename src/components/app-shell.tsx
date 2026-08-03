@@ -107,7 +107,10 @@ export function AppShell({
   );
 
   return (
-    <div className="flex min-h-screen flex-1 flex-col pb-16 lg:pb-0">
+    // El hueco de abajo tiene que contar el área segura: la barra inferior es
+    // `fixed` y crece con `env(safe-area-inset-bottom)`, así que con un `pb-16`
+    // fijo el indicador de inicio del iPhone se comía el final del contenido.
+    <div className="flex min-h-screen flex-1 flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
       {/* El relleno superior deja hueco a la barra de estado del iPhone, que
           con `black-translucent` se dibuja encima del contenido. */}
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 pt-[env(safe-area-inset-top)] backdrop-blur-md supports-[backdrop-filter]:bg-background/65">
