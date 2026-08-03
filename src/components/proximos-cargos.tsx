@@ -39,14 +39,14 @@ export function ProximosCargos({ cargos }: { cargos: ProximoCargo[] }) {
         {cargos.slice(0, 6).map((c) => (
           <li
             key={`${c.recurrenciaId}-${c.fecha}`}
-            className="flex items-baseline justify-between gap-3 text-xs"
+            className="flex items-baseline justify-between gap-2.5 text-xs min-w-0"
           >
-            <span className="truncate font-medium">{c.concepto}</span>
-            <span className="shrink-0 text-faint">{formatFecha(c.fecha)}</span>
+            <span className="min-w-0 flex-1 truncate font-medium text-foreground">{c.concepto}</span>
+            <span className="shrink-0 text-faint tabular-nums text-2xs">{formatFecha(c.fecha)}</span>
             <Money
               value={c.importe}
               tono={c.tipo === "GASTO" ? "gasto" : "ingreso"}
-              className="w-24 shrink-0 text-right font-medium"
+              className="shrink-0 text-right font-medium"
             />
           </li>
         ))}

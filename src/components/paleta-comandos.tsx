@@ -119,11 +119,11 @@ export function PaletaComandos({
   return (
     <DialogPrimitive.Root open={abierta} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-background/70 backdrop-blur-[2px] data-[state=closed]:animate-overlay-out data-[state=open]:animate-overlay-in" />
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=closed]:animate-overlay-out data-[state=open]:animate-overlay-in" />
         <DialogPrimitive.Content
           className={cn(
-            "fixed left-1/2 top-[12vh] z-50 w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2",
-            "overflow-hidden rounded-xl border border-border bg-card shadow-lg",
+            "fixed inset-x-0 top-[12vh] z-50 mx-auto w-[calc(100vw-2rem)] max-w-lg",
+            "overflow-hidden rounded-xl border border-border bg-card shadow-xl",
             "data-[state=open]:animate-panel-in data-[state=closed]:animate-panel-out",
           )}
         >

@@ -109,8 +109,8 @@ export function PresupuestoProgresoChart({
 
                 return (
                   <div key={p.id} className="group space-y-1">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-foreground flex items-center gap-1.5 truncate max-w-[65%]">
+                    <div className="flex items-center justify-between gap-2 text-xs min-w-0">
+                      <span className="font-medium text-foreground flex items-center gap-1.5 min-w-0 flex-1 truncate">
                         {esExcedido ? (
                           <AlertTriangle className="size-3.5 text-danger shrink-0" />
                         ) : esAviso ? (
@@ -118,10 +118,10 @@ export function PresupuestoProgresoChart({
                         ) : (
                           <CheckCircle2 className="size-3.5 text-success/80 shrink-0" />
                         )}
-                        <span className="truncate">{nombreCat}</span>
+                        <span className="truncate min-w-0">{nombreCat}</span>
                       </span>
 
-                      <span className="text-2xs text-muted-foreground font-mono">
+                      <span className="text-2xs text-muted-foreground font-mono shrink-0 tabular-nums">
                         <strong className="text-foreground">{formatEUR(p.gastado)}</strong> / {formatEUR(p.importe)}
                       </span>
                     </div>

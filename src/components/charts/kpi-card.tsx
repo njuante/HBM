@@ -52,9 +52,9 @@ export function KpiCard({
           : "text-foreground";
 
   const cuerpo = (
-    <>
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-2xs font-medium uppercase tracking-wide text-faint">
+    <div className="min-w-0">
+      <div className="flex items-start justify-between gap-2 min-w-0">
+        <p className="text-2xs font-medium uppercase tracking-wide text-faint truncate">
           {label}
         </p>
         {serie && serie.length > 1 && (
@@ -63,17 +63,17 @@ export function KpiCard({
       </div>
       <p
         className={cn(
-          "mt-2 font-serif text-3xl font-medium leading-none tabular-nums",
+          "mt-2 font-serif text-2xl sm:text-3xl font-medium leading-none tabular-nums truncate",
           claseValor,
         )}
       >
         {crudo ? valor : formatEUR(valor)}
       </p>
-      <div className="mt-2 flex h-4 items-center gap-1.5">
+      <div className="mt-2 flex h-4 items-center gap-1.5 min-w-0 overflow-hidden">
         {delta != null && <Delta valor={delta} invertido={tono === "gastos"} />}
-        {sufijo && <span className="text-2xs text-faint">{sufijo}</span>}
+        {sufijo && <span className="text-2xs text-faint truncate">{sufijo}</span>}
       </div>
-    </>
+    </div>
   );
 
   const accentClass =
