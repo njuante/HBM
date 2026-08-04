@@ -194,6 +194,11 @@ async function CuerpoPanel({
 
   return (
     <>
+      {/* Fuera de las dos ramas: la banda de avisos se ve igual en ambas, y
+          repetirla dejaba dos copias del mismo texto en el DOM —una oculta—
+          con las que cualquier búsqueda por texto encuentra dos resultados. */}
+      {avisos}
+
       <div className="lg:hidden">
         <PanelMovil
           meses={meses}
@@ -205,12 +210,10 @@ async function CuerpoPanel({
           presupuestoResumen={presupuestosResumen}
           recientes={recientes.items}
           cargos={cargos}
-          avisos={avisos}
         />
       </div>
 
       <div className="hidden lg:block">
-        {avisos}
         <PanelContenido
           kpis={kpis}
           kpisAnterior={kpisAnterior}

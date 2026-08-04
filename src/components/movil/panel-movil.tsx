@@ -45,7 +45,6 @@ export function PanelMovil({
   presupuestoResumen,
   recientes,
   cargos,
-  avisos,
 }: {
   meses: number;
   kpis: Kpis;
@@ -67,8 +66,6 @@ export function PanelMovil({
 
   return (
     <div className="pb-4">
-      {avisos}
-
       {!hayDatos ? (
         <Grupo className="px-5 py-10 text-center">
           <TrendingDown className="mx-auto size-8 text-faint" />

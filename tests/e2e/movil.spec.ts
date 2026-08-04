@@ -34,10 +34,9 @@ async function crearCasa(page: Page) {
 
 async function crearGasto(page: Page, concepto: string, importe: string) {
   await page.goto("/movimientos");
-  await page
-    .getByRole("button", { name: /^añadir$/i })
-    .first()
-    .click();
+  // En móvil el alta es el botón redondo de la cabecera: no lleva rótulo
+  // visible, así que se busca por su nombre accesible.
+  await page.getByRole("button", { name: /añadir movimiento/i }).click();
   await page.getByLabel("Concepto").fill(concepto);
   await page.getByLabel(/importe/i).fill(importe);
   await page.getByRole("radio", { name: "Alimentación" }).click();
@@ -54,9 +53,9 @@ test("se puede editar y borrar un movimiento sin hover", async ({ page }) => {
   const acciones = page.getByRole("button", { name: /acciones de compra movil/i }).first();
   await expect(acciones).toBeVisible();
 
-  // Editar
+  // Editar: la hoja de acciones sustituye al menú desplegable de la tabla.
   await acciones.click();
-  await page.getByRole("menuitem", { name: /editar/i }).click();
+  await page.getByRole("button", { name: /^editar$/i }).click();
   await page.getByLabel("Concepto").fill("Compra editada");
   await page.getByRole("button", { name: /guardar/i }).click();
   await expect(page.getByText("Compra editada").first()).toBeVisible();
@@ -66,8 +65,9 @@ test("se puede editar y borrar un movimiento sin hover", async ({ page }) => {
     .getByRole("button", { name: /acciones de compra editada/i })
     .first()
     .click();
-  await page.getByRole("menuitem", { name: /eliminar/i }).click();
-  await page.getByRole("button", { name: /eliminar/i }).last().click();
+  // Sin diálogo de confirmación: la hoja marca «Eliminar» en rojo y el aviso
+  // que sale después deja deshacerlo, que es el patrón de una app táctil.
+  await page.getByRole("button", { name: /^eliminar$/i }).click();
 
   // Sobre el botón de la fila y no sobre el texto: el aviso de «eliminado»
   // también contiene el concepto y nunca daría cero.
@@ -92,6 +92,9 @@ test("el importe se lee sin desplazarse en horizontal", async ({ page }) => {
 
 test("la búsqueda es alcanzable con el dedo", async ({ page }) => {
   await registrarse(page, "paleta");
+  // Ya no hay lupa en una cabecera web: en móvil buscar vive en «Más», que es
+  // donde se recogieron las acciones al retirar la cabecera de escritorio.
+  await page.getByRole("button", { name: /más secciones/i }).click();
   await page.getByRole("button", { name: /^buscar$/i }).click();
   await expect(page.getByPlaceholder(/busca un movimiento/i)).toBeVisible();
 });

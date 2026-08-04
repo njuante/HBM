@@ -59,7 +59,13 @@ export function CabeceraGrande({
           <span className="min-w-0 flex-1 truncate text-[17px] font-semibold tracking-tight">
             {titulo}
           </span>
-          {accion}
+          {/* La acción no se duplica: se muda. Tenerla en los dos sitios
+              dejaba dos controles con el mismo nombre accesible —un lector de
+              pantalla los anuncia dos veces y el tabulador pasa por ambos—, y
+              `inert` no basta porque no todas las herramientas lo respetan.
+              El relevo ocurre con la cabecera ya pegada al borde, así que el
+              reajuste queda fuera de la vista. */}
+          {compacta && accion}
         </div>
       </div>
 
@@ -76,7 +82,11 @@ export function CabeceraGrande({
             <p className="mt-2 text-[13px] text-muted-foreground">{subtitulo}</p>
           )}
         </div>
-        {accion && <div className="shrink-0 pb-1">{accion}</div>}
+        {accion && (
+          // Se reserva el hueco aunque la acción se haya mudado a la barra:
+          // así el título no se ensancha de golpe al cruzar el umbral.
+          <div className="size-11 shrink-0">{!compacta && accion}</div>
+        )}
       </header>
     </>
   );

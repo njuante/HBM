@@ -59,7 +59,7 @@ test("crear una recurrencia manual y confirmar su propuesta", async ({ page }) =
     ).toBeVisible({ timeout: 2000 });
   }).toPass({ timeout: 15000 });
 
-  await expect(page.getByText(/39,90/).first()).toBeVisible();
+  await expect(page.getByText(/39,90/).filter({ visible: true }).first()).toBeVisible();
 });
 
 test("un gasto se convierte en recurrencia desde su fila", async ({ page }) => {

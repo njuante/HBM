@@ -37,10 +37,14 @@ test("crear casa, gasto e ingreso y ver el saldo", async ({ page }) => {
   await expect(page.getByText("Nómina test").filter({ visible: true }).first()).toBeVisible();
 
   // El saldo de la cabecera es la resta de los dos.
-  await expect(page.getByText(/957,50/).first()).toBeVisible();
+  await expect(page.getByText(/957,50/).filter({ visible: true }).first()).toBeVisible();
 
   // Los filtros por tipo dejan ver cada lado por separado.
   await page.getByRole("radio", { name: "Ingresos" }).click();
+  // Esperar al filtro antes de contar: el conteo mira también el árbol oculto
+  // de la otra composición, así que sin esto, en un servidor recién arrancado
+  // se evalúa sobre la lista de antes de navegar y encuentra el gasto.
+  await expect(page).toHaveURL(/tipo=INGRESO/);
   await expect(page.getByText("Nómina test").filter({ visible: true }).first()).toBeVisible();
   await expect(page.getByText("Compra test")).toHaveCount(0);
 });

@@ -35,6 +35,6 @@ test("el panel muestra KPIs y gráficas tras registrar movimientos", async ({ pa
 
   // Panel: saldo = 1000 - 42,50 = 957,50 y al menos una gráfica de Recharts.
   await page.goto("/dashboard");
-  await expect(page.getByText(/957,50/).first()).toBeVisible();
+  await expect(page.getByText(/957,50/).filter({ visible: true }).first()).toBeVisible();
   await expect(page.locator("svg.recharts-surface").first()).toBeVisible();
 });
