@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { ArrowLeftRight, Plus, FileSpreadsheet } from "lucide-react";
 import { toDateInputValue } from "@/lib/format";
+import { formatEUR } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Money } from "@/components/ui/money";
@@ -25,6 +26,10 @@ import {
   CambiarCategoriaSheet,
   type MovimientoACategorizar,
 } from "@/components/movimiento/cambiar-categoria-sheet";
+import { CabeceraGrande } from "@/components/movil/cabecera-grande";
+import { SegmentadoMovil } from "@/components/movil/segmentado";
+import { ListaMovimientosMovil } from "@/components/movil/lista-movimientos";
+import { AccionesSheet, accionesMovimiento } from "@/components/movil/acciones-sheet";
 import type { CategoriaChip } from "@/components/movimiento/categoria-chips";
 import { MovimientosTabla } from "@/components/movimiento/movimientos-tabla";
 import { FiltrosMovimientos } from "@/components/movimiento/filtros-movimientos";
@@ -93,6 +98,9 @@ export function MovimientosClient({
   );
 
   const [importarAbierto, setImportarAbierto] = React.useState(false);
+
+  // Qué fila abrió la hoja de acciones (sólo móvil).
+  const [accionesDe, setAccionesDe] = React.useState<string | null>(null);
 
   // Qué movimiento está eligiendo categoría, y el cambio ya pintado mientras
   // el servidor responde: recategorizar tiene que sentirse instantáneo.
@@ -257,83 +265,153 @@ export function MovimientosClient({
     return list;
   }, [categoriasGasto, categoriasIngreso]);
 
+  // Handlers compartidos por las dos composiciones: lo que cambia entre web
+  // y móvil es la forma, no lo que hace cada acción.
+  const abrirRecategorizar = (id: string) => {
+    const m = itemsPintados.find((i) => i.id === id);
+    if (!m) return;
+    setRecategorizando({
+      id: m.id,
+      tipo: m.tipo,
+      concepto: m.concepto,
+      categoriaId: m.categoria.id,
+      subcategoriaId: m.subcategoria?.id,
+    });
+  };
+
+  const duplicar = (id: string) => {
+    const d = desde(id);
+    // Duplicar es un alta prerrellenada: se suelta el id y la fecha pasa a
+    // hoy, que es lo que se busca casi siempre.
+    if (d) setBorrador({ ...d, id: undefined, fecha: toDateInputValue() });
+  };
+
+  const convertir = (id: string) => {
+    const m = items.find((i) => i.id === id);
+    if (m) router.push(`/recurrentes?desde=${id}&tipo=${m.tipo}`);
+  };
+
+  const vacio = (
+    <EmptyState
+      icon={ArrowLeftRight}
+      titulo={hayFiltros ? "Nada con estos filtros" : "Aún no hay movimientos"}
+      descripcion={
+        hayFiltros
+          ? "Prueba a quitar alguno."
+          : "Usa «Añadir» ahí arriba para apuntar el primero."
+      }
+    />
+  );
+
+  const enAcciones = accionesDe ? itemsPintados.find((m) => m.id === accionesDe) : null;
+
   return (
     <div>
-      <PageHeader
-        title="Movimientos"
-        description={<Saldo resumen={resumen} />}
-        action={
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" onClick={() => setImportarAbierto(true)} className="gap-1.5 text-xs">
-              <FileSpreadsheet className="size-4 text-success" />
-              Importar Extracto
-            </Button>
-            <Button onClick={() => setBorrador({})}>
-              <Plus />
-              Añadir
-            </Button>
-          </div>
-        }
-      />
-
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Segmented
-          ariaLabel="Tipo de movimiento"
-          value={filtros.tipo ?? ""}
-          onChange={(v) => irA({ tipo: v })}
-          options={[...TIPOS]}
+      {/* ── Móvil ─────────────────────────────────────────────────────── */}
+      <div className="lg:hidden">
+        <CabeceraGrande
+          titulo="Movimientos"
+          subtitulo={<Saldo resumen={resumen} />}
+          accion={
+            <button
+              type="button"
+              onClick={() => setBorrador({})}
+              aria-label="Añadir movimiento"
+              className="pulsable flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+            >
+              <Plus className="size-5" />
+            </button>
+          }
         />
-        <FiltrosMovimientos
-          filtros={filtros}
-          casas={casas}
-          categorias={[...categoriasGasto, ...categoriasIngreso]}
-          mostrarCasa={mostrarCasa}
-        />
-      </div>
 
-      <Card className="overflow-hidden">
-        {items.length === 0 ? (
-          <EmptyState
-            icon={ArrowLeftRight}
-            titulo={
-              hayFiltros ? "Nada con estos filtros" : "Aún no hay movimientos"
-            }
-            descripcion={
-              hayFiltros
-                ? "Prueba a quitar alguno."
-                : "Usa «Añadir» ahí arriba para apuntar el primero."
-            }
+        <div className="mb-4 space-y-2">
+          <SegmentadoMovil
+            ariaLabel="Tipo de movimiento"
+            opciones={TIPOS}
+            value={filtros.tipo ?? ""}
+            onChange={(v) => irA({ tipo: v })}
           />
+          <div className="flex items-center gap-2">
+            <FiltrosMovimientos
+              filtros={filtros}
+              casas={casas}
+              categorias={[...categoriasGasto, ...categoriasIngreso]}
+              mostrarCasa={mostrarCasa}
+            />
+            <button
+              type="button"
+              onClick={() => setImportarAbierto(true)}
+              className="pulsable flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-xs font-medium"
+            >
+              <FileSpreadsheet className="size-3.5 text-success" />
+              Importar
+            </button>
+          </div>
+        </div>
+
+        {items.length === 0 ? (
+          <Card className="overflow-hidden">{vacio}</Card>
         ) : (
-          <MovimientosTabla
+          <ListaMovimientosMovil
             items={itemsPintados}
             mostrarCasa={mostrarCasa}
             onEditar={(id) => setBorrador(desde(id))}
-            onCambiarCategoria={(id) => {
-              const m = itemsPintados.find((i) => i.id === id);
-              if (!m) return;
-              setRecategorizando({
-                id: m.id,
-                tipo: m.tipo,
-                concepto: m.concepto,
-                categoriaId: m.categoria.id,
-                subcategoriaId: m.subcategoria?.id,
-              });
-            }}
-            onDuplicar={(id) => {
-              const d = desde(id);
-              // Duplicar es un alta prerrellenada: se suelta el id y la fecha
-              // pasa a hoy, que es lo que se busca casi siempre.
-              if (d) setBorrador({ ...d, id: undefined, fecha: toDateInputValue() });
-            }}
-            onConvertir={(id) => {
-              const m = items.find((i) => i.id === id);
-              if (m) router.push(`/recurrentes?desde=${id}&tipo=${m.tipo}`);
-            }}
-            onEliminar={eliminar}
+            onCambiarCategoria={abrirRecategorizar}
+            onAcciones={setAccionesDe}
           />
         )}
-      </Card>
+      </div>
+
+      {/* ── Escritorio ────────────────────────────────────────────────── */}
+      <div className="hidden lg:block">
+        <PageHeader
+          title="Movimientos"
+          description={<Saldo resumen={resumen} />}
+          action={
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" onClick={() => setImportarAbierto(true)} className="gap-1.5 text-xs">
+                <FileSpreadsheet className="size-4 text-success" />
+                Importar Extracto
+              </Button>
+              <Button onClick={() => setBorrador({})}>
+                <Plus />
+                Añadir
+              </Button>
+            </div>
+          }
+        />
+
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <Segmented
+            ariaLabel="Tipo de movimiento"
+            value={filtros.tipo ?? ""}
+            onChange={(v) => irA({ tipo: v })}
+            options={[...TIPOS]}
+          />
+          <FiltrosMovimientos
+            filtros={filtros}
+            casas={casas}
+            categorias={[...categoriasGasto, ...categoriasIngreso]}
+            mostrarCasa={mostrarCasa}
+          />
+        </div>
+
+        <Card className="overflow-hidden">
+          {items.length === 0 ? (
+            vacio
+          ) : (
+            <MovimientosTabla
+              items={itemsPintados}
+              mostrarCasa={mostrarCasa}
+              onEditar={(id) => setBorrador(desde(id))}
+              onCambiarCategoria={abrirRecategorizar}
+              onDuplicar={duplicar}
+              onConvertir={convertir}
+              onEliminar={eliminar}
+            />
+          )}
+        </Card>
+      </div>
 
       <Paginacion
         pagina={pagina}
@@ -353,6 +431,20 @@ export function MovimientosClient({
         presupuestos={presupuestos}
         defaults={borrador ?? undefined}
         action={borrador?.id ? actualizarMovimientoAction : crearMovimientoAction}
+      />
+
+      <AccionesSheet
+        abierta={enAcciones !== null && enAcciones !== undefined}
+        onOpenChange={(v) => !v && setAccionesDe(null)}
+        titulo={enAcciones?.concepto ?? ""}
+        descripcion={enAcciones ? formatEUR(enAcciones.importe) : undefined}
+        acciones={accionesMovimiento({
+          puedeEditar: enAcciones?.puedeEditar !== false,
+          onEditar: () => enAcciones && setBorrador(desde(enAcciones.id)),
+          onDuplicar: () => enAcciones && duplicar(enAcciones.id),
+          onConvertir: enAcciones ? () => convertir(enAcciones.id) : undefined,
+          onEliminar: () => enAcciones && eliminar(enAcciones.id),
+        })}
       />
 
       <CambiarCategoriaSheet

@@ -298,6 +298,72 @@
   50% { opacity: 0.45; }
 }
 
+/* ──────────────────────────────────────────────────────────────────
+   Movimiento del panel móvil
+
+   Los gráficos llegan pintados desde el servidor y la animación es solo
+   CSS: así no hay que convertirlos en componentes cliente ni esperar a
+   hidratar para que se dibujen. Cada keyframe declara únicamente el
+   `from`; el `to` implícito es el estilo del propio elemento, que es lo
+   que permite que el destino venga calculado en línea.
+
+   El bloque de `prefers-reduced-motion` de más abajo las deja en 0.01ms,
+   con lo que el elemento aparece directamente en su estado final.
+   ────────────────────────────────────────────────────────────────── */
+@keyframes anillo-crece {
+  from { stroke-dasharray: 0 9999; }
+}
+.anillo-crece {
+  animation: anillo-crece 900ms var(--ease-out-quint) both;
+}
+
+@keyframes barra-crece {
+  from { width: 0; }
+}
+.barra-crece {
+  width: var(--destino, 0%);
+  animation: barra-crece 700ms var(--ease-out-quint) both;
+}
+
+@keyframes entra-abajo {
+  from { opacity: 0; transform: translateY(10px); }
+}
+/* La escalera es corta a propósito: pasados ~6 bloques el retardo se nota
+   como lentitud, no como intención. A partir de ahí entran todos juntos. */
+.entra-escalonado > * {
+  animation: entra-abajo 460ms var(--ease-out-quint) both;
+}
+.entra-escalonado > *:nth-child(1) { animation-delay: 0ms; }
+.entra-escalonado > *:nth-child(2) { animation-delay: 45ms; }
+.entra-escalonado > *:nth-child(3) { animation-delay: 90ms; }
+.entra-escalonado > *:nth-child(4) { animation-delay: 135ms; }
+.entra-escalonado > *:nth-child(5) { animation-delay: 180ms; }
+.entra-escalonado > *:nth-child(n + 6) { animation-delay: 215ms; }
+
+/* Color de categoría resuelto en el servidor para los dos temas.
+
+   El panel móvil se pinta en el servidor, donde no se sabe si el usuario
+   tiene claro u oscuro. En vez de convertir la lista en cliente sólo para
+   consultarlo, se emiten las dos versiones ya armonizadas y aquí se elige
+   la que toca. Coste en cliente: cero. */
+.cat {
+  --cat: var(--cat-claro);
+}
+.dark .cat {
+  --cat: var(--cat-oscuro);
+}
+
+/* Respuesta al dedo: en táctil no hay hover, y sin una reacción al pulsar
+   la interfaz parece que no ha recibido el toque. */
+.pulsable {
+  transition: transform 140ms var(--ease-out-quint), opacity 140ms;
+  -webkit-tap-highlight-color: transparent;
+}
+.pulsable:active {
+  transform: scale(0.975);
+  opacity: 0.9;
+}
+
 /* ══════════════════════════════════════════════════════════════════════
    5. Base
    ══════════════════════════════════════════════════════════════════════ */

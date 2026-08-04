@@ -16,6 +16,7 @@ import {
   PiggyBank,
   ReceiptText,
   Search,
+  SunMoon,
   Repeat,
   Tags,
   Target,
@@ -71,6 +72,10 @@ function ajustesPara(alquileresActivo: boolean): NavItem[] {
 
 export type Membership = { familiaId: string; nombre: string };
 
+/** Fila del cajón: 44px de alto, que es el mínimo que un pulgar acierta. */
+const FILA_CAJON =
+  "flex min-h-11 items-center gap-2.5 rounded-md px-2.5 text-sm font-medium transition-colors";
+
 const esActivo = (pathname: string, href: string) =>
   pathname === href || pathname.startsWith(href + "/");
 
@@ -111,19 +116,30 @@ export function AppShell({
     // `fixed` y crece con `env(safe-area-inset-bottom)`, así que con un `pb-16`
     // fijo el indicador de inicio del iPhone se comía el final del contenido.
     <div className="flex min-h-screen flex-1 flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
-      {/* El relleno superior deja hueco a la barra de estado del iPhone, que
-          con `black-translucent` se dibuja encima del contenido. */}
-      <header className="sticky top-0 z-40 border-b border-border bg-background/80 pt-[env(safe-area-inset-top)] backdrop-blur-md supports-[backdrop-filter]:bg-background/65">
-        <div className="mx-auto flex h-14 w-full max-w-[1180px] items-center gap-3 px-4 sm:px-6">
-          <NavMovil
-            nav={NAV}
-            ajustes={ajustes}
-            pathname={pathname}
-            familiaNombre={familiaNombre}
-            abierto={cajon}
-            onOpenChange={setCajon}
-          />
+      {/* El cajón vive fuera de la cabecera: ahora que esta desaparece en
+          móvil, colgarlo de un contenedor con `display:none` sería atarlo a
+          algo que ya no existe justo donde es la única navegación. */}
+      <NavMovil
+        nav={NAV}
+        ajustes={ajustes}
+        pathname={pathname}
+        familiaNombre={familiaNombre}
+        userNombre={userNombre}
+        userEmail={userEmail}
+        familiaId={familiaId}
+        memberships={memberships}
+        abierto={cajon}
+        onOpenChange={setCajon}
+        onBuscar={abrirPaleta}
+      />
 
+      {/* Solo escritorio. En móvil el cromo permanente lo pone la barra
+          inferior, y el título lo pone cada pantalla: dos barras fijas —esta y
+          la del título— se comían una franja de pantalla que en un móvil no
+          sobra. El relleno superior deja hueco a la barra de estado del
+          iPhone, que con `black-translucent` se dibuja sobre el contenido. */}
+      <header className="sticky top-0 z-40 hidden border-b border-border bg-background/80 pt-[env(safe-area-inset-top)] backdrop-blur-md supports-[backdrop-filter]:bg-background/65 lg:block">
+        <div className="mx-auto flex h-14 w-full max-w-[1180px] items-center gap-3 px-4 sm:px-6">
           <Link
             href="/dashboard"
             className="group flex shrink-0 flex-col justify-center leading-none"
@@ -171,7 +187,9 @@ export function AppShell({
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-[1180px] flex-1 min-w-0 overflow-x-clip px-4 py-4 sm:px-6 sm:py-9">
+      {/* Sin cabecera arriba en móvil, el área segura la tiene que reservar el
+          propio contenido: si no, el título grande nace debajo del notch. */}
+      <main className="mx-auto w-full max-w-[1180px] flex-1 min-w-0 overflow-x-clip px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top))] sm:px-6 lg:py-9">
         {children}
       </main>
 
@@ -253,34 +271,66 @@ function NavPestanas({ nav, pathname }: { nav: NavItem[]; pathname: string }) {
 }
 
 /**
- * Cajón lateral en pantallas estrechas. Sustituye a la tira horizontal.
+ * El cajón «Más» de la barra inferior.
  *
- * No tiene disparador propio: lo abre «Más» en la barra inferior. Tenerlo
- * también en la cabecera dejaba dos navegaciones a la vez en móvil.
+ * Al retirar la cabecera web en móvil, esto deja de ser sólo una lista de
+ * secciones y pasa a ser lo que en una app nativa es la pestaña de ajustes:
+ * el único sitio donde viven buscar, el tema y la cuenta. Por eso baja
+ * desde el borde inferior y no desde el lateral —el pulgar llega ahí— y por
+ * eso las filas miden 44px.
  */
 function NavMovil({
   nav,
   ajustes,
   pathname,
   familiaNombre,
+  userNombre,
+  userEmail,
+  familiaId,
+  memberships,
   abierto,
   onOpenChange,
+  onBuscar,
 }: {
   nav: NavItem[];
   ajustes: NavItem[];
   pathname: string;
   familiaNombre: string;
+  userNombre: string;
+  userEmail?: string;
+  familiaId?: string;
+  memberships: Membership[];
   abierto: boolean;
   onOpenChange: (v: boolean) => void;
+  onBuscar: () => void;
 }) {
-  const setAbierto = onOpenChange;
+  const cerrar = () => onOpenChange(false);
+
+  const iniciales = userNombre
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join("")
+    .toUpperCase();
 
   return (
     <DialogPrimitive.Root open={abierto} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-background/70 backdrop-blur-[2px] data-[state=closed]:animate-overlay-out data-[state=open]:animate-overlay-in" />
-        <DialogPrimitive.Content className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-card p-3 shadow-lg focus:outline-none data-[state=closed]:animate-sheet-out data-[state=open]:animate-sheet-in">
-          <div className="mb-4 flex items-start justify-between px-2 pt-1">
+        <DialogPrimitive.Content
+          className={cn(
+            "fixed inset-x-0 bottom-0 z-50 flex max-h-[88dvh] flex-col",
+            "rounded-t-[22px] border-t border-border bg-card shadow-xl focus:outline-none",
+            "pb-[env(safe-area-inset-bottom)]",
+            "data-[state=closed]:animate-sheet-out data-[state=open]:animate-sheet-in",
+            // En pantalla ancha sigue siendo el cajón lateral de siempre.
+            "lg:inset-y-0 lg:right-auto lg:bottom-auto lg:left-0 lg:max-h-none lg:w-64",
+            "lg:rounded-none lg:border-r lg:border-t-0",
+          )}
+        >
+          <div className="mx-auto mt-2 h-1 w-9 shrink-0 rounded-full bg-border-strong/60 lg:hidden" />
+
+          <div className="flex items-start justify-between px-4 pb-3 pt-3">
             <div className="leading-none">
               <DialogPrimitive.Title className="font-serif text-lg font-medium tracking-tight">
                 HBM
@@ -295,33 +345,120 @@ function NavMovil({
               </Button>
             </DialogPrimitive.Close>
           </div>
-          <nav className="flex flex-col gap-0.5">
-            {[...nav, ...ajustes].map(({ href, label, icon: Icon }, i) => {
-              const activo = esActivo(pathname, href);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  // Un filete separa el uso diario de la configuración.
-                  data-separado={i === nav.length ? "" : undefined}
-                  aria-current={activo ? "page" : undefined}
-                  // Cerrar aquí y no en un efecto sobre `pathname`: la
-                  // navegación es el evento, no una consecuencia del render.
-                  onClick={() => setAbierto(false)}
-                  className={cn(
-                    "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
-                    "data-[separado]:mt-2 data-[separado]:border-t data-[separado]:border-border data-[separado]:pt-3",
-                    activo
-                      ? "bg-primary-soft text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">
+            <nav className="flex flex-col gap-0.5">
+              {[...nav, ...ajustes].map(({ href, label, icon: Icon }, i) => {
+                const activo = esActivo(pathname, href);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    // Un filete separa el uso diario de la configuración.
+                    data-separado={i === nav.length ? "" : undefined}
+                    aria-current={activo ? "page" : undefined}
+                    // Cerrar aquí y no en un efecto sobre `pathname`: la
+                    // navegación es el evento, no una consecuencia del render.
+                    onClick={cerrar}
+                    className={cn(FILA_CAJON,
+                      "data-[separado]:mt-2 data-[separado]:border-t data-[separado]:border-border data-[separado]:pt-3",
+                      activo
+                        ? "bg-primary-soft text-primary"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    )}
+                  >
+                    <Icon className="size-4" />
+                    {label}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {/* Lo que vivía en la cabecera web. En escritorio sigue arriba, así
+                que esta parte es sólo para pantallas estrechas. */}
+            <div className="mt-2 border-t border-border pt-2 lg:hidden">
+              <button
+                type="button"
+                onClick={() => {
+                  cerrar();
+                  onBuscar();
+                }}
+                className={cn(FILA_CAJON, "w-full text-muted-foreground hover:bg-muted hover:text-foreground")}
+              >
+                <Search className="size-4" />
+                Buscar
+              </button>
+
+              <div className={cn(FILA_CAJON, "justify-between text-muted-foreground")}>
+                <span className="flex items-center gap-2.5">
+                  <SunMoon className="size-4" />
+                  Tema
+                </span>
+                <ThemeToggle />
+              </div>
+            </div>
+
+            <div className="mt-2 border-t border-border pt-2 lg:hidden">
+              <div className="flex items-center gap-2.5 px-2.5 py-2">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-2xs font-medium text-muted-foreground">
+                  {iniciales}
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-medium">{userNombre}</span>
+                  {userEmail && (
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {userEmail}
+                    </span>
                   )}
+                </span>
+              </div>
+
+              <Link
+                href="/ajustes/perfil"
+                onClick={cerrar}
+                className={cn(FILA_CAJON, "text-muted-foreground hover:bg-muted hover:text-foreground")}
+              >
+                <UserCog className="size-4" />
+                Tu perfil
+              </Link>
+
+              {memberships.length > 1 &&
+                memberships.map((m) => (
+                  <form key={m.familiaId} action={cambiarFamilia}>
+                    <input type="hidden" name="familiaId" value={m.familiaId} />
+                    <button
+                      type="submit"
+                      className={cn(FILA_CAJON, "w-full text-muted-foreground hover:bg-muted hover:text-foreground")}
+                    >
+                      <Users className="size-4" />
+                      <span className="min-w-0 flex-1 truncate text-left">{m.nombre}</span>
+                      {m.familiaId === familiaId && (
+                        <Check className="size-3.5 shrink-0 text-primary" />
+                      )}
+                    </button>
+                  </form>
+                ))}
+
+              <Link
+                href="/onboarding"
+                onClick={cerrar}
+                className={cn(FILA_CAJON, "text-muted-foreground hover:bg-muted hover:text-foreground")}
+              >
+                <FolderPlus className="size-4" />
+                Crear otra familia
+              </Link>
+
+              <form action={logout}>
+                <button
+                  type="submit"
+                  className={cn(FILA_CAJON, "w-full text-danger hover:bg-danger/10")}
                 >
-                  <Icon className="size-4" />
-                  {label}
-                </Link>
-              );
-            })}
-          </nav>
+                  <LogOut className="size-4" />
+                  Cerrar sesión
+                </button>
+              </form>
+            </div>
+          </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

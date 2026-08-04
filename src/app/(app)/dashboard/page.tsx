@@ -7,7 +7,9 @@ import {
   gastosPorCategoria,
   kpisDashboard,
   resumenMensual,
-  serieDiaria,
+  type CategoriaTotal,
+  type Kpis,
+  type PuntoMensual,
   type RangoDashboard,
 } from "@/server/db/dashboard";
 import { listMovimientos } from "@/server/db/movimientos";
@@ -31,6 +33,11 @@ import { KpiCard } from "@/components/charts/kpi-card";
 import { FlujoMensualChart } from "@/components/charts/flujo-mensual";
 import { GastosPorCategoriaChart } from "@/components/charts/gastos-por-categoria";
 import { PresupuestoProgresoChart } from "@/components/charts/presupuesto-progreso-chart";
+import type { MovimientoDTO } from "@/lib/validation/movimiento";
+import type { PresupuestoConsumo } from "@/lib/validation/presupuesto";
+import { PanelMovil } from "@/components/movil/panel-movil";
+import { CabeceraGrande } from "@/components/movil/cabecera-grande";
+import { SelectorPeriodo } from "@/components/movil/selector-periodo";
 import { FiltrosPanel } from "./filtros-panel";
 
 export default async function DashboardPage(props: {
@@ -57,69 +64,84 @@ export default async function DashboardPage(props: {
   const casas = await listCasas(ctx.familiaId);
 
   return (
-    <div>
-      <PageHeader
-        title="Panel"
-        description={`${ctx.familia.nombre} · últimos ${meses} ${meses === 1 ? "mes" : "meses"}`}
-        // Una sola acción, y que haga lo que promete: el «+» abre el diálogo
-        // en vez de limitarse a navegar. El botón «Facturas» que había al lado
-        // no era una acción, era el enlace que ya está en la navegación.
-        action={
-          <Button asChild size="sm">
-            <Link href="/movimientos?nuevo=1">
-              <Plus />
-              Apuntar movimiento
+    <>
+      {/* Dos composiciones distintas sobre los mismos datos, y no una sola
+          estrechada. El corte lo hace CSS y no el `User-Agent`: la app de
+          Android y la web instalada en el iPhone atacan este mismo servidor
+          —el APK es solo una ventana sobre él, ver `capacitor.config.ts`—,
+          así que lo único que las distingue de verdad es el ancho.
+
+          El cromo (título y filtros) se pinta por duplicado porque no cuesta
+          consultas; los **datos** se leen una sola vez, dentro de un único
+          `Suspense`, y alimentan las dos composiciones. Montar un árbol por
+          vista con su propia cosecha habría doblado el trabajo de base de
+          datos de la pantalla principal para enseñar sólo la mitad. */}
+      <div className="lg:hidden">
+        <CabeceraGrande
+          titulo="Panel"
+          subtitulo={`${ctx.familia.nombre} · últimos ${meses} ${meses === 1 ? "mes" : "meses"}`}
+          accion={
+            <Link
+              href="/movimientos?nuevo=1"
+              aria-label="Apuntar movimiento"
+              className="pulsable flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+            >
+              <Plus className="size-5" />
             </Link>
-          </Button>
-        }
-      />
-
-      <Suspense fallback={null}>
-        <BandaAvisos familiaId={ctx.familiaId} />
-      </Suspense>
-
-      <FiltrosPanel casas={casas} casaId={casaId} meses={meses} />
-
-      <Suspense key={`${casaId}-${meses}`} fallback={<PanelSkeleton />}>
-        <PanelContenido familiaId={ctx.familiaId} rango={rango} meses={meses} />
-      </Suspense>
-
-      {/* El consumo de presupuestos ya lo cuenta `PresupuestoProgresoChart`
-          más arriba, y con más detalle. Tenerlo dos veces en la misma pantalla
-          era repetir el mismo dato con otra forma. */}
-      <div className="mt-3">
-        <Suspense fallback={null}>
-          <Cargos familiaId={ctx.familiaId} />
-        </Suspense>
+          }
+        />
+        <div className="mb-5">
+          <SelectorPeriodo meses={meses} casas={casas} casaId={casaId} />
+        </div>
       </div>
-    </div>
+
+      <div className="hidden lg:block">
+        <PageHeader
+          title="Panel"
+          description={`${ctx.familia.nombre} · últimos ${meses} ${meses === 1 ? "mes" : "meses"}`}
+          // Una sola acción, y que haga lo que promete: el «+» abre el diálogo
+          // en vez de limitarse a navegar. El botón «Facturas» que había al lado
+          // no era una acción, era el enlace que ya está en la navegación.
+          action={
+            <Button asChild size="sm">
+              <Link href="/movimientos?nuevo=1">
+                <Plus />
+                Apuntar movimiento
+              </Link>
+            </Button>
+          }
+        />
+        <FiltrosPanel casas={casas} casaId={casaId} meses={meses} />
+      </div>
+
+      <Suspense
+        key={`${casaId}-${meses}`}
+        fallback={
+          <>
+            <div className="lg:hidden">
+              <PanelMovilSkeleton />
+            </div>
+            <div className="hidden lg:block">
+              <PanelSkeleton />
+            </div>
+          </>
+        }
+      >
+        <CuerpoPanel familiaId={ctx.familiaId} rango={rango} meses={meses} />
+      </Suspense>
+    </>
   );
 }
 
-async function Cargos({ familiaId }: { familiaId: string }) {
-  const cargos = await proximosCargos(familiaId, 30);
-  if (cargos.length === 0) return null;
-  return <ProximosCargos cargos={cargos} />;
-}
-
-async function BandaAvisos({ familiaId }: { familiaId: string }) {
-  const [facturas, presupuestos, propuestas] = await Promise.all([
-    alertasFacturas(familiaId),
-    resumenPresupuestos(familiaId, mesActual()),
-    listPropuestas(familiaId),
-  ]);
-  return (
-    <Avisos
-      vencidas={facturas.vencidas}
-      proximas={facturas.proximas}
-      excedidos={presupuestos.excedidos}
-      avisosPresupuesto={presupuestos.avisos}
-      propuestas={propuestas.length}
-    />
-  );
-}
-
-async function PanelContenido({
+/**
+ * Una sola lectura para las dos composiciones.
+ *
+ * Aquí se cosecha todo —incluidos los avisos y los próximos cargos, que
+ * antes iban en sus propios `Suspense`— y se reparte. La alternativa,
+ * un componente de servidor por vista, ejecutaba las consultas de ambas en
+ * cualquier dispositivo: el móvil pagaba también las de escritorio.
+ */
+async function CuerpoPanel({
   familiaId,
   rango,
   meses,
@@ -136,24 +158,99 @@ async function PanelContenido({
     1,
   );
 
-  const [kpis, serie, categorias, kpisAnterior, recientes, presupuestosItems, presupuestosResumen] = await Promise.all([
+  const [
+    kpis,
+    serie,
+    categorias,
+    kpisAnterior,
+    recientes,
+    presupuestosItems,
+    presupuestosResumen,
+    cargos,
+    facturas,
+    propuestas,
+  ] = await Promise.all([
     kpisDashboard(familiaId, rango),
     resumenMensual(familiaId, rango),
     gastosPorCategoria(familiaId, rango),
-    kpisDashboard(familiaId, {
-      ...rango,
-      desde: anteriorDesde,
-      hasta: anteriorHasta,
-    }),
-    listMovimientos(
-      familiaId,
-      { casaId: rango.casaId },
-      { porPagina: 5 },
-    ),
+    kpisDashboard(familiaId, { ...rango, desde: anteriorDesde, hasta: anteriorHasta }),
+    listMovimientos(familiaId, { casaId: rango.casaId }, { porPagina: 5 }),
     listPresupuestos(familiaId, mesActual()),
     resumenPresupuestos(familiaId, mesActual()),
+    proximosCargos(familiaId, 30),
+    alertasFacturas(familiaId),
+    listPropuestas(familiaId),
   ]);
 
+  const avisos = (
+    <Avisos
+      vencidas={facturas.vencidas}
+      proximas={facturas.proximas}
+      excedidos={presupuestosResumen.excedidos}
+      avisosPresupuesto={presupuestosResumen.avisos}
+      propuestas={propuestas.length}
+    />
+  );
+
+  return (
+    <>
+      <div className="lg:hidden">
+        <PanelMovil
+          meses={meses}
+          kpis={kpis}
+          kpisAnterior={kpisAnterior}
+          serie={serie}
+          categorias={categorias}
+          presupuestos={presupuestosItems}
+          presupuestoResumen={presupuestosResumen}
+          recientes={recientes.items}
+          cargos={cargos}
+          avisos={avisos}
+        />
+      </div>
+
+      <div className="hidden lg:block">
+        {avisos}
+        <PanelContenido
+          kpis={kpis}
+          kpisAnterior={kpisAnterior}
+          serie={serie}
+          categorias={categorias}
+          recientes={recientes.items}
+          presupuestosItems={presupuestosItems}
+          presupuestosResumen={presupuestosResumen}
+          casaId={rango.casaId}
+        />
+        {cargos.length > 0 && (
+          <div className="mt-3">
+            <ProximosCargos cargos={cargos} />
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+/** El cuerpo de escritorio. Ya sin consultas: recibe lo que leyó `CuerpoPanel`. */
+function PanelContenido({
+  kpis,
+  kpisAnterior,
+  serie,
+  categorias,
+  recientes,
+  presupuestosItems,
+  presupuestosResumen,
+  casaId,
+}: {
+  kpis: Kpis;
+  kpisAnterior: Kpis;
+  serie: PuntoMensual[];
+  categorias: CategoriaTotal[];
+  recientes: MovimientoDTO[];
+  presupuestosItems: PresupuestoConsumo[];
+  presupuestosResumen: { limite: number; gastado: number };
+  casaId?: string;
+}) {
   const hayDatos = kpis.ingresos > 0 || kpis.gastos > 0;
 
   // Sin base anterior no hay variación que enseñar.
@@ -225,7 +322,7 @@ async function PanelContenido({
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-5">
             <div className="lg:col-span-3">
               {categorias.length > 0 ? (
-                <GastosPorCategoriaChart data={categorias} casaId={rango.casaId} />
+                <GastosPorCategoriaChart data={categorias} casaId={casaId} />
               ) : (
                 <Card className="h-full">
                   <EmptyState
@@ -247,14 +344,28 @@ async function PanelContenido({
             </div>
           </div>
 
-          {recientes.items.length > 0 && (
+          {recientes.length > 0 && (
             <div className="mt-1">
-              <UltimosMovimientos items={recientes.items} />
+              <UltimosMovimientos items={recientes} />
             </div>
           )}
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * Silueta del cuerpo móvil. Solo las tarjetas: el título y el selector se
+ * pintan fuera del `Suspense` y ya están en pantalla cuando esto aparece.
+ */
+function PanelMovilSkeleton() {
+  return (
+    <div>
+      <Skeleton className="h-[164px] w-full rounded-[26px]" />
+      <Skeleton className="mt-7 h-[124px] w-full rounded-[22px]" />
+      <Skeleton className="mt-7 h-[280px] w-full rounded-[22px]" />
+    </div>
   );
 }
 
