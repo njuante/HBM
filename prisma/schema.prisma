@@ -235,6 +235,12 @@ model Gasto {
   metodoPago     MetodoPago?
   recurrente     Boolean     @default(false)
   recurrenciaId  String? // generado por una plantilla de recurrencia
+  /// Huella del apunte del extracto que lo originó (fecha+concepto+importe).
+  /// Nula en lo apuntado a mano: solo la pone el importador.
+  huellaImport   String?
+  /// Distingue apuntes idénticos del mismo día: dos cafés de 1,50 € el mismo
+  /// martes son dos líneas del extracto, no un duplicado. Van numerados 1, 2…
+  ordenImport    Int?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
@@ -248,7 +254,12 @@ model Gasto {
 
   // Candado de idempotencia: una recurrencia genera como mucho un gasto por fecha.
   @@unique([recurrenciaId, fecha])
+  // El mismo candado para el extracto: reimportar un tramo ya cargado no puede
+  // duplicar nada. En Postgres dos NULL nunca chocan, así que lo apuntado a
+  // mano (huella nula) queda fuera de la restricción.
+  @@unique([familiaId, huellaImport, ordenImport])
   @@index([familiaId, fecha])
+  @@index([familiaId, huellaImport])
   @@index([casaId])
   @@index([categoriaId])
 }
@@ -266,6 +277,9 @@ model Ingreso {
   fuente        String?
   recurrente    Boolean  @default(false)
   recurrenciaId String?
+  /// Ver `Gasto.huellaImport`.
+  huellaImport  String?
+  ordenImport   Int?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -276,7 +290,9 @@ model Ingreso {
   recurrencia Recurrencia? @relation(fields: [recurrenciaId], references: [id], onDelete: SetNull)
 
   @@unique([recurrenciaId, fecha])
+  @@unique([familiaId, huellaImport, ordenImport])
   @@index([familiaId, fecha])
+  @@index([familiaId, huellaImport])
   @@index([casaId])
   @@index([categoriaId])
 }

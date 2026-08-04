@@ -21,6 +21,10 @@ import {
   type Tipo,
 } from "@/components/movimiento/movimiento-dialog";
 import { ImportadorDialog } from "@/components/movimiento/importador-dialog";
+import {
+  CambiarCategoriaSheet,
+  type MovimientoACategorizar,
+} from "@/components/movimiento/cambiar-categoria-sheet";
 import type { CategoriaChip } from "@/components/movimiento/categoria-chips";
 import { MovimientosTabla } from "@/components/movimiento/movimientos-tabla";
 import { FiltrosMovimientos } from "@/components/movimiento/filtros-movimientos";
@@ -31,6 +35,8 @@ import type {
 } from "@/lib/validation/movimiento";
 import {
   actualizarMovimientoAction,
+  cambiarCategoriaAction,
+  comprobarImportadosAction,
   crearMovimientoAction,
   eliminarMovimientoAction,
   importarMovimientosAction,
@@ -87,6 +93,28 @@ export function MovimientosClient({
   );
 
   const [importarAbierto, setImportarAbierto] = React.useState(false);
+
+  // Qué movimiento está eligiendo categoría, y el cambio ya pintado mientras
+  // el servidor responde: recategorizar tiene que sentirse instantáneo.
+  const [recategorizando, setRecategorizando] =
+    React.useState<MovimientoACategorizar | null>(null);
+  const [categoriasLocales, setCategoriasLocales] = React.useState<
+    Record<string, { categoria: MovimientoDTO["categoria"]; subcategoria: MovimientoDTO["subcategoria"] }>
+  >({});
+
+  // La lista que llega del servidor manda: en cuanto `revalidar()` la trae ya
+  // cambiada, lo pintado a mano sobra. Se descarta durante el render y no en
+  // un efecto, que dejaría un fotograma con el dato viejo por partida doble.
+  const [itemsPrevios, setItemsPrevios] = React.useState(items);
+  if (items !== itemsPrevios) {
+    setItemsPrevios(items);
+    setCategoriasLocales({});
+  }
+
+  const itemsPintados = React.useMemo(
+    () => items.map((m) => ({ ...m, ...(categoriasLocales[m.id] ?? {}) })),
+    [items, categoriasLocales],
+  );
 
   const hayFiltros = Object.values(filtros).some(Boolean);
   const mostrarCasa = casas.length > 1;
@@ -148,6 +176,70 @@ export function MovimientosClient({
       if (m.recurrente) alta.set("recurrente", "on");
       void crearMovimientoAction(undefined, alta);
     });
+  };
+
+  /**
+   * Aplica la nueva categoría en pantalla y la manda. Si el servidor la
+   * rechaza se retira lo pintado y se dice por qué: dejarlo puesto sería
+   * enseñar una categoría que en la base de datos no cambió.
+   */
+  const cambiarCategoria = async (categoriaId: string, subcategoriaId?: string) => {
+    const m = recategorizando;
+    if (!m) return;
+
+    const cat = buscarCategoria(m.tipo, categoriaId, subcategoriaId);
+    if (!cat) return;
+
+    setCategoriasLocales((prev) => ({ ...prev, [m.id]: cat }));
+
+    const res = await cambiarCategoriaAction({
+      id: m.id,
+      tipo: m.tipo,
+      categoriaId,
+      subcategoriaId,
+    });
+
+    if (!res.ok) {
+      setCategoriasLocales((prev) => {
+        const resto = { ...prev };
+        delete resto[m.id];
+        return resto;
+      });
+      avisar(res.error ?? "No se pudo cambiar la categoría");
+    }
+  };
+
+  /** Reconstruye la categoría pintada a partir de las listas que ya tenemos. */
+  const buscarCategoria = (
+    tipo: "GASTO" | "INGRESO",
+    categoriaId: string,
+    subcategoriaId?: string,
+  ) => {
+    const lista = tipo === "INGRESO" ? categoriasIngreso : categoriasGasto;
+    const c = lista.find((x) => x.id === categoriaId);
+    if (!c) return null;
+    const s = subcategoriaId
+      ? c.subcategorias?.find((x) => x.id === subcategoriaId)
+      : undefined;
+    return {
+      categoria: { id: c.id, nombre: c.nombre, color: c.color, icono: c.icono ?? null },
+      subcategoria: s ? { id: s.id, nombre: s.nombre } : null,
+    };
+  };
+
+  /** Importa y cuenta el resultado, que es lo que dice si valió la pena. */
+  const importar = async (items: Parameters<typeof importarMovimientosAction>[0]) => {
+    const res = await importarMovimientosAction(items);
+    if (res.ok) {
+      const partes = [
+        `${res.importados} ${res.importados === 1 ? "movimiento importado" : "movimientos importados"}`,
+      ];
+      if (res.duplicados > 0) {
+        partes.push(`${res.duplicados} ya ${res.duplicados === 1 ? "estaba" : "estaban"}`);
+      }
+      avisar(partes.join(" · "));
+    }
+    return res;
   };
 
   // El tipo del alta sigue al filtro: si estás mirando ingresos, añades uno.
@@ -214,9 +306,20 @@ export function MovimientosClient({
           />
         ) : (
           <MovimientosTabla
-            items={items}
+            items={itemsPintados}
             mostrarCasa={mostrarCasa}
             onEditar={(id) => setBorrador(desde(id))}
+            onCambiarCategoria={(id) => {
+              const m = itemsPintados.find((i) => i.id === id);
+              if (!m) return;
+              setRecategorizando({
+                id: m.id,
+                tipo: m.tipo,
+                concepto: m.concepto,
+                categoriaId: m.categoria.id,
+                subcategoriaId: m.subcategoria?.id,
+              });
+            }}
             onDuplicar={(id) => {
               const d = desde(id);
               // Duplicar es un alta prerrellenada: se suelta el id y la fecha
@@ -252,12 +355,21 @@ export function MovimientosClient({
         action={borrador?.id ? actualizarMovimientoAction : crearMovimientoAction}
       />
 
+      <CambiarCategoriaSheet
+        movimiento={recategorizando}
+        categoriasGasto={categoriasGasto}
+        categoriasIngreso={categoriasIngreso}
+        onOpenChange={(v) => !v && setRecategorizando(null)}
+        onElegir={cambiarCategoria}
+      />
+
       <ImportadorDialog
         open={importarAbierto}
         onOpenChange={setImportarAbierto}
         categorias={todasLasCategorias}
         casas={casas}
-        actionImportar={importarMovimientosAction}
+        actionImportar={importar}
+        actionComprobar={comprobarImportadosAction}
       />
     </div>
   );

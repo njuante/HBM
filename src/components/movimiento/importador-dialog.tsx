@@ -9,13 +9,12 @@ import {
   AlertCircle,
   CheckSquare,
   Square,
-  ArrowRight,
-  Filter,
+  History,
+  Loader2,
 } from "lucide-react";
 import { parseSantanderExtract, type MovimientoImportado } from "@/lib/bank-parsers/santander";
 import type { ElementoImportacion } from "@/server/db/importador";
 import { formatEUR } from "@/lib/money";
-import { formatFecha } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,6 +45,7 @@ export function ImportadorDialog({
   categorias = [],
   casas = [],
   actionImportar,
+  actionComprobar,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -54,6 +54,10 @@ export function ImportadorDialog({
   actionImportar: (
     items: ElementoImportacion[],
   ) => Promise<{ ok: boolean; importados?: number; error?: string }>;
+  /** Devuelve, para cada apunte leído, si ya se había importado antes. */
+  actionComprobar: (
+    apuntes: { fecha: string; concepto: string; importe: number; tipo: "GASTO" | "INGRESO" }[],
+  ) => Promise<boolean[]>;
 }) {
   const router = useRouter();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -104,7 +108,7 @@ export function ImportadorDialog({
     setErrorText(null);
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
         const buffer = evt.target?.result as ArrayBuffer;
         const parsed = parseSantanderExtract(buffer);
@@ -112,15 +116,41 @@ export function ImportadorDialog({
         if (parsed.length === 0) {
           setErrorText("No se encontraron transacciones en el archivo seleccionado.");
           setMovimientos([]);
-        } else {
-          setMovimientos(parsed);
-          // Auto-sugerir categorías
-          const initialCats: Record<number, string> = {};
-          parsed.forEach((m, idx) => {
-            initialCats[idx] = sugerirCategoria(m.concepto, m.tipo);
-          });
-          setCategoriasSeleccionadas(initialCats);
+          return;
         }
+
+        // Se le pregunta al servidor qué apuntes ya entraron. Es lo que hace
+        // que se pueda cargar el mismo tramo de días un día tras otro: los
+        // conocidos llegan marcados y sin seleccionar, y solo quedan los nuevos.
+        let yaImportados: boolean[] = [];
+        try {
+          yaImportados = await actionComprobar(
+            parsed.map((m) => ({
+              fecha: m.fecha.toISOString(),
+              concepto: m.concepto,
+              importe: m.importe,
+              tipo: m.tipo,
+            })),
+          );
+        } catch (err) {
+          // Si la comprobación falla se sigue adelante: el candado de la base
+          // de datos impide el duplicado igualmente, solo se pierde el aviso.
+          console.error("No se pudo comprobar qué apuntes ya estaban:", err);
+        }
+
+        setMovimientos(
+          parsed.map((m, idx) => {
+            const repetido = yaImportados[idx] === true;
+            return { ...m, yaImportado: repetido, seleccionado: !repetido };
+          }),
+        );
+
+        // Auto-sugerir categorías
+        const initialCats: Record<number, string> = {};
+        parsed.forEach((m, idx) => {
+          initialCats[idx] = sugerirCategoria(m.concepto, m.tipo);
+        });
+        setCategoriasSeleccionadas(initialCats);
       } catch (err) {
         console.error(err);
         setErrorText("Error al leer el archivo de extracto bancario.");
@@ -138,12 +168,22 @@ export function ImportadorDialog({
     );
   };
 
+  // «Todos» son los que aportan algo: los ya importados se quedan fuera, que
+  // es justo lo que evita tener que ir desmarcándolos a mano cada día.
+  const nuevos = movimientos.filter((m) => !m.yaImportado);
+  const todosNuevosSeleccionados =
+    nuevos.length > 0 && nuevos.every((m) => m.seleccionado);
+
   const toggleSeleccionarTodos = () => {
-    const todosSeleccionados = movimientos.every((m) => m.seleccionado);
-    setMovimientos((prev) => prev.map((m) => ({ ...m, seleccionado: !todosSeleccionados })));
+    setMovimientos((prev) =>
+      prev.map((m) =>
+        m.yaImportado ? m : { ...m, seleccionado: !todosNuevosSeleccionados },
+      ),
+    );
   };
 
   const seleccionadosCount = movimientos.filter((m) => m.seleccionado).length;
+  const repetidosCount = movimientos.length - nuevos.length;
 
   const handleImportar = async () => {
     const aImportar = movimientos
@@ -201,7 +241,17 @@ export function ImportadorDialog({
             </div>
           )}
 
-          {movimientos.length === 0 ? (
+          {cargando ? (
+            /* Leer el fichero incluye preguntar al servidor qué apuntes ya
+               están dentro, así que hay una espera de red que hay que contar. */
+            <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border bg-muted/20 p-10 text-center">
+              <Loader2 className="size-6 animate-spin text-primary" />
+              <p className="text-sm font-medium text-foreground">Leyendo el extracto…</p>
+              <p className="text-2xs text-muted-foreground">
+                Comprobando cuáles ya habías importado.
+              </p>
+            </div>
+          ) : movimientos.length === 0 ? (
             /* ZONA DE SUBIDA */
             <div
               onClick={() => fileInputRef.current?.click()}
@@ -227,6 +277,22 @@ export function ImportadorDialog({
           ) : (
             /* BANDEJA DE CATEGORIZACIÓN MANUAL */
             <div className="space-y-3">
+              {repetidosCount > 0 && (
+                <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+                  <History className="mt-px size-4 shrink-0 text-primary" />
+                  <span>
+                    <strong className="font-medium text-foreground">
+                      {repetidosCount} de {movimientos.length}
+                    </strong>{" "}
+                    {repetidosCount === 1 ? "ya estaba importado" : "ya estaban importados"} y
+                    {repetidosCount === 1 ? " se ha" : " se han"} dejado sin marcar.
+                    {nuevos.length > 0
+                      ? ` Quedan ${nuevos.length} sin importar.`
+                      : " No hay nada nuevo en este extracto."}
+                  </span>
+                </div>
+              )}
+
               <div className="flex flex-wrap items-center justify-between gap-3 bg-muted/30 border border-border rounded-lg p-3">
                 <div className="flex items-center gap-2">
                   <Button
@@ -234,14 +300,15 @@ export function ImportadorDialog({
                     variant="ghost"
                     size="sm"
                     onClick={toggleSeleccionarTodos}
+                    disabled={nuevos.length === 0}
                     className="h-8 gap-1.5 text-xs"
                   >
-                    {movimientos.every((m) => m.seleccionado) ? (
+                    {todosNuevosSeleccionados ? (
                       <CheckSquare className="size-4 text-primary" />
                     ) : (
                       <Square className="size-4 text-muted-foreground" />
                     )}
-                    {movimientos.every((m) => m.seleccionado) ? "Deseleccionar todos" : "Seleccionar todos"}
+                    {todosNuevosSeleccionados ? "Deseleccionar todos" : "Seleccionar todos"}
                   </Button>
                   <span className="text-2xs text-muted-foreground">
                     ({movimientos.length} transacciones encontradas)
@@ -305,6 +372,12 @@ export function ImportadorDialog({
                             <div className="truncate font-medium text-foreground" title={m.concepto}>
                               {m.concepto}
                             </div>
+                            {m.yaImportado && (
+                              <span className="mt-0.5 inline-flex items-center gap-1 text-2xs font-medium text-muted-foreground">
+                                <History className="size-3" />
+                                Ya importado
+                              </span>
+                            )}
                           </td>
                           <td className={cn("p-2.5 font-mono font-semibold text-right whitespace-nowrap", esGasto ? "text-red-500" : "text-emerald-500")}>
                             {esGasto ? "-" : "+"}{formatEUR(m.importe)}

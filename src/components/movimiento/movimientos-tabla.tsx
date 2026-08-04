@@ -9,6 +9,7 @@ import {
   Repeat,
   Trash2,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Money } from "@/components/ui/money";
 import { MarcaCategoria } from "@/components/ui/icono-categoria";
 import { armonizarColor } from "@/components/charts/chart-theme";
@@ -76,6 +77,7 @@ export function MovimientosTabla({
   onDuplicar,
   onEliminar,
   onConvertir,
+  onCambiarCategoria,
 }: {
   items: MovimientoFila[];
   mostrarCasa: boolean;
@@ -84,6 +86,8 @@ export function MovimientosTabla({
   onEliminar: (id: string) => void;
   /** Abre la creación de una recurrencia a partir de este movimiento. */
   onConvertir?: (id: string) => void;
+  /** Recategorizar de un toque: la categoría de cada fila es un botón. */
+  onCambiarCategoria?: (id: string) => void;
 }) {
   const { resolvedTheme } = useTheme();
 
@@ -173,15 +177,19 @@ export function MovimientosTabla({
                           <span aria-hidden className="text-faint">
                             ·
                           </span>
-                          <MarcaCategoria
+                          <BotonCategoria
+                            nombre={m.categoria.nombre}
+                            sub={m.subcategoria?.nombre}
                             icono={m.categoria.icono}
                             color={color}
-                            className="size-3 shrink-0"
+                            concepto={m.concepto}
+                            // Sin permiso para editar, la categoría es solo texto.
+                            onClick={
+                              m.puedeEditar !== false && onCambiarCategoria
+                                ? () => onCambiarCategoria(m.id)
+                                : undefined
+                            }
                           />
-                          <span className="truncate">
-                            {m.categoria.nombre}
-                            {m.subcategoria && ` / ${m.subcategoria.nombre}`}
-                          </span>
                           {mostrarCasa && m.casa && (
                             <>
                               <span aria-hidden className="text-faint">
@@ -284,22 +292,18 @@ export function MovimientosTabla({
                         </TD>
 
                         <TD>
-                          <span className="inline-flex items-center gap-1.5 text-xs">
-                            <MarcaCategoria
-                              icono={m.categoria.icono}
-                              color={color}
-                              className="size-3.5 shrink-0"
-                            />
-                            <span className="text-muted-foreground">
-                              {m.categoria.nombre}
-                              {m.subcategoria && (
-                                <span className="text-faint">
-                                  {" "}
-                                  / {m.subcategoria.nombre}
-                                </span>
-                              )}
-                            </span>
-                          </span>
+                          <BotonCategoria
+                            nombre={m.categoria.nombre}
+                            sub={m.subcategoria?.nombre}
+                            icono={m.categoria.icono}
+                            color={color}
+                            concepto={m.concepto}
+                            onClick={
+                              m.puedeEditar !== false && onCambiarCategoria
+                                ? () => onCambiarCategoria(m.id)
+                                : undefined
+                            }
+                          />
                         </TD>
 
                         {mostrarCasa && (
@@ -328,6 +332,69 @@ export function MovimientosTabla({
         </TableWrap>
       </div>
     </>
+  );
+}
+
+/**
+ * La categoría de una fila, pulsable para cambiarla.
+ *
+ * Es el atajo que evita el rodeo por el formulario completo. Se pinta como
+ * texto y no como botón: en una lista larga, veinte botones de colores serían
+ * ruido. El área táctil sí es de botón —`py-1 -my-1` la engorda sin mover
+ * nada de sitio— y el subrayado punteado al posarse dice que se puede tocar.
+ */
+function BotonCategoria({
+  nombre,
+  sub,
+  icono,
+  color,
+  concepto,
+  onClick,
+}: {
+  nombre: string;
+  sub?: string;
+  icono?: string | null;
+  color: string;
+  concepto: string;
+  /** Sin él se pinta el mismo texto, pero inerte. */
+  onClick?: () => void;
+}) {
+  const contenido = (
+    <>
+      <MarcaCategoria icono={icono} color={color} className="size-3.5 shrink-0" />
+      <span className="truncate text-muted-foreground">
+        {nombre}
+        {sub && <span className="text-faint"> / {sub}</span>}
+      </span>
+    </>
+  );
+
+  if (!onClick) {
+    return (
+      <span className="inline-flex min-w-0 items-center gap-1.5 text-xs">
+        {contenido}
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`Cambiar la categoría de ${concepto}, ahora ${nombre}`}
+      className={cn(
+        "relative -my-1 inline-flex min-w-0 items-center gap-1.5 rounded-sm py-1 text-xs",
+        "transition-colors hover:text-foreground",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        "decoration-dotted underline-offset-4 hover:underline",
+        // El texto mide ~26px de alto, por debajo de lo que un pulgar acierta.
+        // El pseudo-elemento estira la zona sensible a ~44px sin ocupar ni un
+        // píxel más de maquetación, que en una fila tan apretada importa.
+        "before:absolute before:-inset-y-2 before:inset-x-0 before:content-['']",
+      )}
+    >
+      {contenido}
+    </button>
   );
 }
 

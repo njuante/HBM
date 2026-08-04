@@ -15,6 +15,7 @@ import {
   eliminarIngreso,
   getIngreso,
 } from "@/server/db/ingresos";
+import { cambiarCategoriaMovimiento } from "@/server/db/movimientos";
 import { gastoSchema } from "@/lib/validation/gasto";
 import { ingresoSchema } from "@/lib/validation/ingreso";
 import { flattenZodErrors, type FormState } from "@/lib/validation/form";
@@ -118,6 +119,43 @@ export async function actualizarMovimientoAction(
   return { ok: true };
 }
 
+/**
+ * Recategoriza de un toque desde la lista, sin abrir el formulario completo.
+ *
+ * Devuelve el error en vez de lanzarlo: quien llama pinta el cambio antes de
+ * que llegue la respuesta y necesita saber si tiene que echarlo atrás.
+ */
+export async function cambiarCategoriaAction(input: {
+  id: string;
+  tipo: "GASTO" | "INGRESO";
+  categoriaId: string;
+  subcategoriaId?: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const ctx = await requireFamilia();
+  const autorId = autorRequerido(ctx);
+
+  const res = await cambiarCategoriaMovimiento(
+    ctx.familiaId,
+    input.id,
+    input.tipo,
+    input.categoriaId,
+    input.subcategoriaId,
+    autorId,
+  );
+
+  if (!res.ok) {
+    // El único motivo por el que un MEMBER no encuentra el movimiento es que
+    // no sea suyo; decirlo así ahorra buscar un fallo que no existe.
+    if (autorId && res.error === "Movimiento no encontrado.") {
+      return { ok: false, error: SIN_PERMISO };
+    }
+    return { ok: false, error: res.error };
+  }
+
+  revalidar();
+  return { ok: true };
+}
+
 export async function eliminarMovimientoAction(formData: FormData): Promise<void> {
   const ctx = await requireFamilia();
   const id = String(formData.get("id") ?? "");
@@ -129,7 +167,12 @@ export async function eliminarMovimientoAction(formData: FormData): Promise<void
   revalidar();
 }
 
-import { importarMovimientosBatch, type ElementoImportacion } from "@/server/db/importador";
+import {
+  importarMovimientosBatch,
+  planificarImportacion,
+  type ElementoImportacion,
+} from "@/server/db/importador";
+import type { ApunteExtracto } from "@/lib/importacion/huella";
 
 export async function importarMovimientosAction(items: ElementoImportacion[]) {
   const ctx = await requireFamilia();
@@ -138,4 +181,18 @@ export async function importarMovimientosAction(items: ElementoImportacion[]) {
     revalidar();
   }
   return res;
+}
+
+/**
+ * Marca, para el extracto recién leído, qué apuntes ya se importaron.
+ *
+ * La huella se calcula aquí y no en el navegador: es lo que decide si algo se
+ * duplica, así que no puede venir del cliente.
+ */
+export async function comprobarImportadosAction(
+  apuntes: ApunteExtracto[],
+): Promise<boolean[]> {
+  const ctx = await requireFamilia();
+  const plan = await planificarImportacion(ctx.familiaId, apuntes);
+  return plan.map((p) => p.yaImportado);
 }

@@ -187,3 +187,57 @@ export async function listMovimientos(
     paginas: Math.max(1, Math.ceil(cuantos / porPagina)),
   };
 }
+
+/**
+ * Cambia solo la categoría de un movimiento.
+ *
+ * Existe aparte de `actualizarGasto`/`actualizarIngreso` porque el formulario
+ * completo exige el movimiento entero —importe, fecha, casa, concepto— para
+ * reclasificar un apunte. Aquí se toca un campo y se dejan los demás en paz,
+ * que es lo que permite recategorizar de un toque desde la lista.
+ *
+ * La subcategoría se limpia siempre que cambia la madre: colgaría de una
+ * categoría que ya no es la suya.
+ */
+export async function cambiarCategoriaMovimiento(
+  familiaId: string,
+  id: string,
+  tipo: "GASTO" | "INGRESO",
+  categoriaId: string,
+  subcategoriaId?: string,
+  autorId?: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  // La categoría tiene que ser de esta familia y del mismo tipo: si no, se
+  // podría colar la categoría de otra casa por el id.
+  const cat = await prisma.categoria.findFirst({
+    where: { id: categoriaId, familiaId, tipo },
+    select: { id: true },
+  });
+  if (!cat) return { ok: false, error: "La categoría seleccionada no es válida." };
+
+  if (subcategoriaId) {
+    const sub = await prisma.categoria.findFirst({
+      where: { id: subcategoriaId, familiaId, tipo, parentId: categoriaId },
+      select: { id: true },
+    });
+    if (!sub) return { ok: false, error: "La subcategoría no pertenece a la categoría elegida." };
+  }
+
+  // `updateMany` con el filtro de familia (y de autor si es un MEMBER) es lo
+  // que impide tocar el movimiento de otra familia conociendo su id.
+  const donde = { id, familiaId, ...(autorId ? { usuarioId: autorId } : {}) };
+
+  const { count } =
+    tipo === "GASTO"
+      ? await prisma.gasto.updateMany({
+          where: donde,
+          data: { categoriaId, subcategoriaId: subcategoriaId ?? null },
+        })
+      : await prisma.ingreso.updateMany({
+          where: donde,
+          data: { categoriaId },
+        });
+
+  if (count === 0) return { ok: false, error: "Movimiento no encontrado." };
+  return { ok: true };
+}

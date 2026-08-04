@@ -10,6 +10,8 @@ export type MovimientoImportado = {
   casaId?: string;
   divisa?: string;
   seleccionado: boolean;
+  /** Lo dice el servidor al leer el fichero: ya entró en una importación previa. */
+  yaImportado?: boolean;
 };
 
 /**
